@@ -1,0 +1,49 @@
+services:
+  db-postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_db
+    ports:
+      - 9999:5432
+  
+  db-mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+
+  db-redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+
+  testing:
+    build:
+      context: .
+      dockerfile: docker_images/testing/Dockerfile.testing
+    env_file:
+      - ./.envs/.env.test.docker
+    environment:
+      ENVIRONMENT: testing_docker
+      POSTGRESQL_URL: postgresql://test:test@db-postgres:5432/test_db
+      MONGO_URL: mongodb://db-mongodb:27017/test_db
+      REDIS_URL: redis://db-redis:6379
+    depends_on:
+      - db-postgres
+      - db-mongodb
+      - db-redis
+  
+  lambda-app:
+    build:
+      context: .
+      dockerfile: docker_images/deploy/Dockerfile.deploy
+    environment:
+      - ENVIRONMENT=local_docker
+      - POSTGRESQL_URL=postgresql://test:test@db-postgres:5432/test_db
+      - MONGO_URL=mongodb://db-mongodb:27017/test_db
+      - REDIS_URL=redis://db-redis:6379
+    env_file:
+      - ./.envs/.env.local.docker
+    ports:
+      - 9100:8080
