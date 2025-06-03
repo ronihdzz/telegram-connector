@@ -33,7 +33,8 @@ class Settings(BaseSettings):
         validate_default=True
     )
     ROOT_PATH: str | None = ""
-
+    HOST: str
+    API_KEY: str
     SENTRY_DSN: str | None = None
 
     TIME_ZONE: str = "America/Mexico_City"
@@ -69,3 +70,14 @@ class Settings(BaseSettings):
     MONGO_URL: MongoDsn
     REDIS_URL: RedisDsn
 
+    # Telegram settings
+    # ----------------------------------------------------------------
+
+    TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_SECRET_TOKEN: str
+
+
+    # Webhook
+    # ----------------------------------------------------------------
+
+    WEBHOOK_MESSAGE_RECEIVED: str 
