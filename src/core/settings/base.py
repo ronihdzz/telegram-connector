@@ -70,12 +70,6 @@ class Settings(BaseSettings):
     MONGO_URL: MongoDsn
     REDIS_URL: RedisDsn
 
-    # Telegram settings
-    # ----------------------------------------------------------------
-
-    TELEGRAM_BOT_TOKEN: str
-    TELEGRAM_SECRET_TOKEN: str
-
 
     # Webhook
     # ----------------------------------------------------------------

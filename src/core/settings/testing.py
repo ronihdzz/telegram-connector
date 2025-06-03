@@ -14,7 +14,8 @@ class TestingSettings(Settings):
         validate_default=True
     )
 
-    TELEGRAM_BOT_TOKEN: str = "fake-token"
     HOST: str = "https://fake-host/dev"
-    TELEGRAM_SECRET_TOKEN: str = "fake-secret-token"
+    WEBHOOK_MESSAGE_RECEIVED: str = "https://fake-host/dev/webhook/message-received"
+    API_KEY : str = "fake-api-key"
+    
 
