@@ -1,113 +1,118 @@
 # 🤖 Telegram Connector
 
+**Language / Idioma:**
+* [English](README.md) 
+* [Español](README.es.md)
+
+---
 
 | CI Environment | Coverage |
 |-----------|----------|
 | development| ![Coverage Badge](https://github.com/ronihdzz/telegram-connector/blob/artifacts/development/latest/coverage.svg) 
 
 
-## 📋 Descripción
+## 📋 Description
 
-**Telegram Connector** es una solución integral que permite a las aplicaciones integrarse seamlessly con bots de Telegram, habilitando tanto la **recepción de mensajes entrantes** como el **envío de mensajes salientes** a través de cualquier bot registrado en la plataforma.
+**Telegram Connector** is a comprehensive solution that allows applications to seamlessly integrate with Telegram bots, enabling both **incoming message reception** and **outgoing message sending** through any bot registered on the platform.
 
-### ✨ Características Principales
+### ✨ Key Features
 
-- 🔄 **Comunicación Bidireccional**: Recibe y envía mensajes desde/hacia Telegram
-- 🎯 **Multi-Bot Support**: Gestiona múltiples bots por usuario
-- 📡 **Webhooks Automatizados**: Configuración automática de webhooks con Telegram
-- 🛡️ **Autenticación Robusta**: Validación de API Keys y secret tokens
-- 📊 **Logging Detallado**: Trazabilidad completa de mensajes y operaciones
-- 🐳 **Docker Ready**: Despliegue containerizado con docker-compose
+- 🔄 **Bidirectional Communication**: Receive and send messages from/to Telegram
+- 🎯 **Multi-Bot Support**: Manage multiple bots per user
+- 📡 **Automated Webhooks**: Automatic webhook configuration with Telegram
+- 🛡️ **Robust Authentication**: API Keys and secret tokens validation
+- 📊 **Detailed Logging**: Complete traceability of messages and operations
+- 🐳 **Docker Ready**: Containerized deployment with docker-compose
 
-## 🏗️ Arquitectura del Sistema
+## 🏗️ System Architecture
 
-### Flujo de Datos
+### Data Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as "Usuario/Sistema"
-    participant API as "API REST"
+    participant User as "User/System"
+    participant API as "REST API"
     participant DB as "PostgreSQL"
     participant TG as "Telegram API" 
-    participant Bot as "Bot Telegram"
-    participant Webhook as "Sistema Destino"
+    participant Bot as "Telegram Bot"
+    participant Webhook as "Target System"
     
-    Note over User,Webhook: Flujo de Registro de Bot
+    Note over User,Webhook: Bot Registration Flow
     User->>+API: POST /v1/telegram/connect<br/>(bot_user_name, bot_token)
-    API->>+DB: Crear TelegramConnector<br/>(credenciales + secret_token)
-    DB->>-API: Conector creado
+    API->>+DB: Create TelegramConnector<br/>(credentials + secret_token)
+    DB->>-API: Connector created
     API->>+TG: setWebhook<br/>(webhook_url + secret_token)
-    TG->>-API: Webhook configurado
-    API->>-User: Conector registrado exitosamente
+    TG->>-API: Webhook configured
+    API->>-User: Connector registered successfully
     
-    Note over User,Webhook: Flujo de Mensaje Entrante
-    Bot->>+TG: Usuario envía mensaje al bot
-    TG->>+API: POST /v1/telegram/webhook/{id}<br/>(mensaje + secret_token)
-    API->>+DB: Validar conector por ID
-    DB->>-API: Conector válido
-    API->>API: Procesar mensaje<br/>(extraer texto, chat_id, etc.)
-    API->>+Webhook: POST webhook_url<br/>(mensaje procesado)
-    Webhook->>-API: Mensaje recibido
+    Note over User,Webhook: Incoming Message Flow
+    Bot->>+TG: User sends message to bot
+    TG->>+API: POST /v1/telegram/webhook/{id}<br/>(message + secret_token)
+    API->>+DB: Validate connector by ID
+    DB->>-API: Valid connector
+    API->>API: Process message<br/>(extract text, chat_id, etc.)
+    API->>+Webhook: POST webhook_url<br/>(processed message)
+    Webhook->>-API: Message received
     API->>-TG: Status OK
     
-    Note over User,Webhook: Flujo de Mensaje Saliente
+    Note over User,Webhook: Outgoing Message Flow
     User->>+API: POST /v1/telegram/send/{id}<br/>(chat_id, text)
-    API->>+DB: Validar conector y permisos
-    DB->>-API: Conector válido
+    API->>+DB: Validate connector and permissions
+    DB->>-API: Valid connector
     API->>+TG: sendMessage<br/>(bot_token, chat_id, text)
-    TG->>+Bot: Entregar mensaje al usuario
-    Bot->>-TG: Mensaje entregado
-    TG->>-API: message_id de confirmación
-    API->>-User: Mensaje enviado exitosamente
+    TG->>+Bot: Deliver message to user
+    Bot->>-TG: Message delivered
+    TG->>-API: message_id confirmation
+    API->>-User: Message sent successfully
 ```
 
-### Componentes del Sistema
+### System Components
 
 #### 🎯 API Layer (`api/v1/telegram/`)
-- **endpoints.py**: Exposición de APIs REST para operaciones de Telegram
-- **services.py**: Lógica de negocio para conectar, enviar y recibir mensajes
-- **repositories.py**: Capa de acceso a datos para operaciones CRUD
-- **schema.py**: Modelos de datos y validación con Pydantic
+- **endpoints.py**: REST API exposure for Telegram operations
+- **services.py**: Business logic for connecting, sending and receiving messages
+- **repositories.py**: Data access layer for CRUD operations
+- **schema.py**: Data models and validation with Pydantic
 
 #### 🗄️ Data Layer (`db/postgres/`)
-- **telegram_connectors.py**: Modelo de base de datos para gestión de bots
+- **telegram_connectors.py**: Database model for bot management
 
-## 📊 Modelo de Datos
+## 📊 Data Model
 
 ### TelegramConnector
 
-Tabla principal que almacena la información de los bots conectados:
+Main table that stores connected bot information:
 
-| Campo | Tipo | Descripción |
+| Field | Type | Description |
 |-------|------|-------------|
-| `id` | UUID | Identificador único del conector |
-| `user_id` | UUID | ID del usuario propietario del bot |
-| `bot_user_name` | String | Nombre de usuario del bot (@ejemplo_bot) |
-| `bot_token` | String | Token de API del bot |
-| `bot_token_secret` | String | Token secreto para validación de webhooks |
-| `created_at` | DateTime | Fecha de creación |
-| `updated_at` | DateTime | Fecha de última actualización |
+| `id` | UUID | Unique connector identifier |
+| `user_id` | UUID | Bot owner user ID |
+| `bot_user_name` | String | Bot username (@example_bot) |
+| `bot_token` | String | Bot API token |
+| `bot_token_secret` | String | Secret token for webhook validation |
+| `created_at` | DateTime | Creation date |
+| `updated_at` | DateTime | Last update date |
 
 ## 🔌 API Endpoints
 
-### 1. Conectar Bot de Telegram
+### 1. Connect Telegram Bot
 
 **`POST /v1/telegram/connect`**
 
-Registra un nuevo bot de Telegram y configura su webhook automáticamente.
+Registers a new Telegram bot and automatically configures its webhook.
 
 **Headers:**
 ```json
 {
-  "X-Api-Key": "tu_api_key_aqui",
-  "X-User-Id": "uuid_del_usuario"
+  "X-Api-Key": "your_api_key_here",
+  "X-User-Id": "user_uuid"
 }
 ```
 
 **Request Body:**
 ```json
 {
-  "bot_user_name": "@mi_bot",
+  "bot_user_name": "@my_bot",
   "bot_token": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
 }
 ```
@@ -119,28 +124,28 @@ Registra un nuevo bot de Telegram y configura su webhook automáticamente.
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "user_id": "550e8400-e29b-41d4-a716-446655440001",
-    "bot_user_name": "@mi_bot",
+    "bot_user_name": "@my_bot",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
   }
 }
 ```
 
-### 2. Webhook para Mensajes Entrantes
+### 2. Webhook for Incoming Messages
 
 **`POST /v1/telegram/webhook/{telegram_connector_id}`**
 
-Endpoint automáticamente configurado por Telegram para recibir mensajes. Telegram envía un objeto `Update` completo en el body del request.
+Endpoint automatically configured by Telegram to receive messages. Telegram sends a complete `Update` object in the request body.
 
 **Headers:**
 ```json
 {
   "Content-Type": "application/json",
-  "X-Telegram-Bot-Api-Secret-Token": "token_secreto_generado"
+  "X-Telegram-Bot-Api-Secret-Token": "generated_secret_token"
 }
 ```
 
-**Request Body (enviado por Telegram):**
+**Request Body (sent by Telegram):**
 ```json
 {
   "update_id": 10000,
@@ -161,7 +166,7 @@ Endpoint automáticamente configurado por Telegram para recibir mensajes. Telegr
       "last_name": "Test Lastname",
       "username": "Test"
     },
-    "text": "Hola desde Telegram!"
+    "text": "Hello from Telegram!"
   }
 }
 ```
@@ -173,17 +178,17 @@ Endpoint automáticamente configurado por Telegram para recibir mensajes. Telegr
 }
 ```
 
-### 3. Enviar Mensaje
+### 3. Send Message
 
 **`POST /v1/telegram/send/{telegram_connector_id}`**
 
-Envía un mensaje a través del bot especificado.
+Sends a message through the specified bot.
 
 **Headers:**
 ```json
 {
-  "X-Api-Key": "tu_api_key_aqui",
-  "X-User-Id": "uuid_del_usuario"
+  "X-Api-Key": "your_api_key_here",
+  "X-User-Id": "user_uuid"
 }
 ```
 
@@ -191,7 +196,7 @@ Envía un mensaje a través del bot especificado.
 ```json
 {
   "chat_id": 123456789,
-  "text": "Hola! Este es un mensaje desde la API"
+  "text": "Hello! This is a message from the API"
 }
 ```
 
@@ -206,50 +211,90 @@ Envía un mensaje a través del bot especificado.
 }
 ```
 
+## ⚙️ Environment Variables
 
-## ⚙️ Variables de Entorno
-
-### Variables Requeridas
+### Required Variables
 
 ```bash
-# Configuración General
-ENVIRONMENT=local                              # Entorno de ejecución
-HOST=http://localhost:8000                     # URL base de la API
-API_KEY=tu_api_key_super_secreto              # Clave API para autenticación
+# General Configuration
+ENVIRONMENT=local                              # Runtime environment
+HOST=http://localhost:8000                     # API base URL
+API_KEY=your_super_secret_api_key             # API key for authentication
 
-# Base de Datos
+# Database
 POSTGRESQL_URL=postgresql://user:password@localhost:5432/telegram_connector
 
-# Webhook de Destino
-WEBHOOK_MESSAGE_RECEIVED=https://tu-app.com/api/webhook/telegram-message
+# Target Webhook
+WEBHOOK_MESSAGE_RECEIVED=https://your-app.com/api/webhook/telegram-message
 ```
 
-### Variables Opcionales
+### Optional Variables
 
 ```bash
-# Logging y Monitoreo
-SENTRY_DSN=https://tu-sentry-dsn.com           # Para tracking de errores
-TIME_ZONE=America/Mexico_City                  # Zona horaria
+# Logging and Monitoring
+SENTRY_DSN=https://your-sentry-dsn.com         # For error tracking
+TIME_ZONE=America/Mexico_City                  # Time zone
 
-# Configuración del Proyecto
+# Project Configuration
 PROJECT__NAME=Telegram Connector
 PROJECT__VERSION=1.0.0
-PROJECT__DESCRIPTION=API para integración con Telegram
+PROJECT__DESCRIPTION=API for Telegram integration
 ```
 
-## 📖 Ejemplos de Uso
+## 🚀 Installation and Setup
 
-### 1. Registrar un Bot
+### Prerequisites
+
+- Python 3.12+
+- PostgreSQL
+- Docker and Docker Compose (optional)
+
+### Installation with Poetry
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/ronihdzz/telegram-connector.git
+cd telegram-connector
+```
+
+2. **Install dependencies:**
+```bash
+poetry install
+```
+
+3. **Configure environment variables:**
+```bash
+cp .envs/.example.env .envs/.local.env
+# Edit .envs/.local.env with your configuration
+```
+
+4. **Run the application:**
+```bash
+poetry run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Installation with Docker
+
+1. **Clone and run:**
+```bash
+git clone https://github.com/ronihdzz/telegram-connector.git
+cd telegram-connector
+docker-compose up -d
+```
+
+## 📖 Usage Examples
+
+### 1. Register a Bot
 
 ```python
 import requests
 
-# Configuración
+# Configuration
 API_BASE = "http://localhost:8000/v1"
-API_KEY = "tu_api_key"
+API_KEY = "your_api_key"
 USER_ID = "550e8400-e29b-41d4-a716-446655440001"
 
-# Registrar bot
+# Register bot
 response = requests.post(
     f"{API_BASE}/telegram/connect",
     headers={
@@ -257,20 +302,20 @@ response = requests.post(
         "X-User-Id": USER_ID
     },
     json={
-        "bot_user_name": "@mi_bot_de_prueba",
+        "bot_user_name": "@my_test_bot",
         "bot_token": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
     }
 )
 
 bot_data = response.json()
 connector_id = bot_data["data"]["id"]
-print(f"Bot registrado con ID: {connector_id}")
+print(f"Bot registered with ID: {connector_id}")
 ```
 
-### 2. Enviar un Mensaje
+### 2. Send a Message
 
 ```python
-# Enviar mensaje usando el bot registrado
+# Send message using the registered bot
 response = requests.post(
     f"{API_BASE}/telegram/send/{connector_id}",
     headers={
@@ -278,18 +323,18 @@ response = requests.post(
         "X-User-Id": USER_ID
     },
     json={
-        "chat_id": 123456789,  # ID del chat destino
-        "text": "¡Hola desde mi aplicación!"
+        "chat_id": 123456789,  # Target chat ID
+        "text": "Hello from my application!"
     }
 )
 
 result = response.json()
-print(f"Mensaje enviado con ID: {result['data']['telegram_message_id']}")
+print(f"Message sent with ID: {result['data']['telegram_message_id']}")
 ```
 
-### 3. Configurar Webhook de Destino
+### 3. Configure Target Webhook
 
-Para recibir mensajes entrantes, configura un endpoint en tu aplicación:
+To receive incoming messages, set up an endpoint in your application:
 
 ```python
 from fastapi import FastAPI, Request
@@ -299,46 +344,65 @@ app = FastAPI()
 @app.post("/api/webhook/telegram-message")
 async def receive_telegram_message(request: Request):
     """
-    Webhook que recibe mensajes entrantes de Telegram
+    Webhook that receives incoming messages from Telegram
     """
     data = await request.json()
     
-    print(f"Mensaje recibido de {data['bot_user_name']}")
+    print(f"Message received from {data['bot_user_name']}")
     print(f"Chat ID: {data['chat_id']}")
-    print(f"Texto: {data['text']}")
-    print(f"Usuario: {data['user_id']}")
+    print(f"Text: {data['text']}")
+    print(f"User: {data['user_id']}")
     
-    # Procesar el mensaje aquí...
+    # Process the message here...
     
     return {"status": "processed"}
 ```
 
-
-## 📚 Documentación Adicional
+## 📚 Additional Documentation
 
 ### API Documentation
 
-Una vez ejecutándose la aplicación, accede a:
+Once the application is running, access:
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-### Estructura del Proyecto
+### Project Structure
 
 ```
 telegram-connector/
 ├── src/
-│   ├── api/v1/telegram/          # API REST endpoints
-│   ├── db/postgres/models/       # Modelos de base de datos
-│   ├── core/settings/            # Configuración de la aplicación
-│   ├── shared/                   # Utilidades compartidas
+│   ├── api/v1/telegram/          # REST API endpoints
+│   ├── db/postgres/models/       # Database models
+│   ├── core/settings/            # Application configuration
+│   ├── shared/                   # Shared utilities
 │   └── tests/                    # Test suites
-├── docker_images/                # Configuraciones Docker
-├── .envs/                        # Variables de entorno
-└── docs/                         # Documentación adicional
+├── docker_images/                # Docker configurations
+├── .envs/                        # Environment variables
+└── docs/                         # Additional documentation
 ```
 
+## 🧪 Testing
 
-## 👨‍💻 Autor
+Run the test suite:
+
+```bash
+# With Poetry
+poetry run pytest
+
+# With coverage
+poetry run pytest --cov=src --cov-report=html
+```
+
+## 🤝 Contributing
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+
+## 👨‍💻 Author
 
 **Ronaldo Hernández** - [@ronihdzz](https://github.com/ronihdzz)
 
@@ -346,9 +410,9 @@ telegram-connector/
 
 <div align="center">
 
-**¿Te gusta el proyecto? ¡Dale una ⭐!**
+**Like the project? Give it a ⭐!**
 
-[🐛 Reportar Bug](https://github.com/ronihdzz/telegram-connector/issues) • [✨ Solicitar Feature](https://github.com/ronihdzz/telegram-connector/issues) • [💬 Discusiones](https://github.com/ronihdzz/telegram-connector/discussions)
+[🐛 Report Bug](https://github.com/ronihdzz/telegram-connector/issues) • [✨ Request Feature](https://github.com/ronihdzz/telegram-connector/issues) • [💬 Discussions](https://github.com/ronihdzz/telegram-connector/discussions)
 
 </div>
 
