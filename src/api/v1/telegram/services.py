@@ -103,7 +103,7 @@ class TelegramWebhookService:
         logger.info(f"ID recibido: {telegram_connector_id}")
 
         exists, telegram_connector = TelegramConnectorRepository.get_by_id(telegram_connector_id)
-        if not exists:
+        if not exists or telegram_connector is None:
             _raise_and_log("Telegram connector not found", status.HTTP_404_NOT_FOUND)
         _log_connector(telegram_connector, context="[Webhook] ")
 
@@ -170,7 +170,7 @@ class SendMessageService:
         user_id = _get_header(headers, "X-User-Id", "User ID is required")
 
         exists, telegram_connector = TelegramConnectorRepository.get_by_id(telegram_connector_id)
-        if not exists:
+        if not exists or telegram_connector is None:
             _raise_and_log("Telegram connector not found", status.HTTP_404_NOT_FOUND)
         _log_connector(telegram_connector, context="[Send] ")
 
