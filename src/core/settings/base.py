@@ -44,10 +44,10 @@ class Settings(BaseSettings):
 
     PROJECT: ProjectSettings = Field(
         default=ProjectSettings(
-            NAME="Api",
-            DESCRIPTION="API implemented with FastAPI",
+            NAME="Telegram Connector",
+            DESCRIPTION="Telegram Connector API",
             VERSION="1.0.0",
-            CODE="api-001",
+            CODE="001",
             AUTHORS="R2"
         ),
         validate_default=True
