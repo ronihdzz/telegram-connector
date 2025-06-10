@@ -67,8 +67,8 @@ class Settings(BaseSettings):
     # ----------------------------------------------------------------
 
     POSTGRESQL_URL: PostgresDsn
-    MONGO_URL: MongoDsn
-    REDIS_URL: RedisDsn
+    # MONGO_URL: MongoDsn
+    #REDIS_URL: RedisDsn
 
 
     # Webhook
