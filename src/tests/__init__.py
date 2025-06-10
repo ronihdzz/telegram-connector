@@ -2,7 +2,6 @@ from loguru import logger
 
 from core.settings import settings
 from db.posgresql.models.public import (  # import all models for create tables for database testing
-    Book,
     TelegramConnector
 )
 from shared.environment import AppEnvironment
