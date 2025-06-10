@@ -125,7 +125,7 @@ jobs:
           path: ${{ env.COVERAGE_REPORTS }}
 
       - name: Guardar coverage
-        uses: ./.github/actions/save-coverage
+        uses: ronihdzz/git-archive-action@v3
         with:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           artifacts-branch: 'artifacts'
