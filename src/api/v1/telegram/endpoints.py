@@ -3,9 +3,11 @@ from uuid import UUID
 from fastapi import Request, Header, APIRouter
 from shared.base_responses import EnvelopeResponse
 from api.v1.telegram.schema import SendMessageIn, SendMessageOut, RequestTelegramConnectorCreateSchema
-from api.v1.telegram.services import ConnectTelegramService, TelegramWebhookService, SendMessageService
+from api.v1.telegram.services import ConnectTelegramService, TelegramWebhookService, SendMessageService, TelegramWebhookManagerService
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
+
+
 
 @router.post("/connect")
 async def connect_telegram(
@@ -13,6 +15,15 @@ async def connect_telegram(
     request: Request
 ) -> EnvelopeResponse:
     return await ConnectTelegramService.connect(payload, request)
+
+
+@router.post("/webhook-manager")
+async def webhook_manager(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(None)
+) -> EnvelopeResponse:
+    return await TelegramWebhookManagerService.webhook_manager(request, x_telegram_bot_api_secret_token)
+
 
 @router.post("/webhook/{telegram_connector_id}")
 async def telegram_webhook(

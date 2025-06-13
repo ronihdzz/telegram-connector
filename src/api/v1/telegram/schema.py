@@ -71,3 +71,13 @@ class WebhookMessageReceived(BaseModel):
     @field_serializer('connector_id')
     def serialize_connector_id(self, v: UUID, _info):
         return str(v)
+
+class WebhookManagerIn(BaseModel):
+    date: datetime
+    message_id: int
+    chat_id: int
+    text: str | None = None
+    caption: str | None = None
+    photo: list[str] | None = None
+    sticker: str | None = None
+    

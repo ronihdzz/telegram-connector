@@ -75,3 +75,7 @@ class Settings(BaseSettings):
     # ----------------------------------------------------------------
 
     WEBHOOK_MESSAGE_RECEIVED: str 
+
+
+    BOT_MANAGER_TOKEN: str
+    BOT_MANAGER_SECRET: str

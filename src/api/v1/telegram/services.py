@@ -8,7 +8,8 @@ from api.v1.telegram.schema import (
     RequestTelegramConnectorCreateSchema,
     TelegramConnectorCreateSchema,
     WebhookMessageReceived,
-    TelegramConnectorCreateResponseSchema
+    TelegramConnectorCreateResponseSchema,
+    WebhookManagerIn
 )
 import requests
 import secrets
@@ -198,3 +199,62 @@ class SendMessageService:
             status="sent"
         )
         return create_response_for_fast_api(data=data_response.model_dump(mode="json"))
+
+
+
+class TelegramWebhookManagerService:
+    @staticmethod
+    async def webhook_manager(
+        request: Request,
+        x_telegram_bot_api_secret_token: str | None
+    ) -> dict[str, str]:
+        logger.info("📥 Webhook recibido")
+
+        # Nunca logues secretos ni tokens completos
+        if x_telegram_bot_api_secret_token != settings.BOT_MANAGER_TOKEN:
+            logger.warning("Token inválido en webhook (NO SE MUESTRA POR SEGURIDAD)")
+            raise HTTPException(status_code=403, detail="Invalid secret")
+        logger.info("Token válido (secreto verificado)")
+
+        message_received = await request.json()
+        logger.debug(f"message_received: {str(message_received)[:500]}")  # Loguea máx 500 chars
+
+        message = message_received.get("message") or message_received.get("edited_message")
+        if not message:
+            logger.info("⚠️ Update ignorado - no es un mensaje")
+            return {"status": "ignored"}
+
+        # Procesa y loguea solo IDs/textos, nunca attachments
+        chat_id = message.get("chat", {}).get("id")
+        webhook_message_received = WebhookManagerIn(
+            message_id=message.get("message_id"),
+            date=datetime.fromtimestamp(message.get("date", 0)),
+            text=message.get("text"),
+            caption=message.get("caption"),
+            photo=message.get("photo"),
+            sticker=message.get("sticker"),
+            chat_id=chat_id
+        )
+
+        logger.info(f"Recibido message_id={webhook_message_received.message_id} chat_id={chat_id}")
+
+
+        # reply to the message
+        # ------------------------------------------------------------
+        logger.info(f"Enviando mensaje a chat_id={webhook_message_received.chat_id} con el bot {settings.BOT_MANAGER_TOKEN}")
+        logger.info(f"Mensaje: {webhook_message_received.text}")
+        TG_API = f"https://api.telegram.org/bot{settings.BOT_MANAGER_TOKEN}"
+        r = requests.post(
+            f"{TG_API}/sendMessage",
+            json={"chat_id": webhook_message_received.chat_id, "text": webhook_message_received.text},
+            timeout=10
+        )
+        data = r.json()
+        logger.debug(f"Respuesta de Telegram: {str(data)[:400]}")
+        if not data.get("ok"):
+            logger.error(f"Telegram error: {data.get('description', 'Unknown error')}")
+            raise HTTPException(status_code=502, detail=data.get("description"))
+        logger.info(f"Mensaje enviado correctamente, message_id={data['result']['message_id']}")
+ 
+
+        return {"status": "ok"}
