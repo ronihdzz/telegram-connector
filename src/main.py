@@ -66,5 +66,10 @@ async def perfil_avanzado_redirect():
 async def dashboard_redirect():
     return RedirectResponse(url="/webapp/dashboard.html")
 
+@app.get("/registro", response_class=HTMLResponse)
+async def registro_redirect():
+    return RedirectResponse(url="/webapp/registro.html")
+
+
 # Configuración en settings.py sería:
 # WEBAPP_BASE_URL: str = "https://tu-dominio.com/webapp"
