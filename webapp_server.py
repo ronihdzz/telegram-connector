@@ -152,6 +152,16 @@ async def root():
             </div>
 
             <div class="app-card">
+                <div class="app-icon">📝</div>
+                <div class="app-title">Registro de Usuario</div>
+                <div class="app-description">
+                    Formulario elegante y minimalista para registrar nuevos usuarios
+                    con validación en tiempo real y animaciones fluidas.
+                </div>
+                <a href="/registro" class="app-link">Abrir Mini App</a>
+            </div>
+
+            <div class="app-card">
                 <div class="app-icon">📊</div>
                 <div class="app-title">Dashboard</div>
                 <div class="app-description">
@@ -181,6 +191,7 @@ WEBAPP_BASE_URL: str = "http://localhost:8001"  # Para desarrollo
 
             <h3>3. URLs de las Mini Apps:</h3>
             <div class="code-block">
+📝 Registro: http://localhost:8001/registro
 🏋️ Rutina Completa: http://localhost:8001/rutina-completa
 👤 Perfil Avanzado: http://localhost:8001/perfil-avanzado  
 📊 Dashboard: http://localhost:8001/dashboard
@@ -203,6 +214,14 @@ uvicorn webapp_server:app --host 0.0.0.0 --port 8001 --reload
     </body>
     </html>
     """
+
+@app.get("/registro", response_class=HTMLResponse)
+async def registro():
+    """Servir Mini App de Registro de Usuario"""
+    file_path = WEBAPP_DIR / "registro.html"
+    if file_path.exists():
+        return FileResponse(file_path, media_type="text/html")
+    return HTMLResponse("<h1>❌ Mini App no encontrada</h1><p>Archivo registro.html no existe</p>", status_code=404)
 
 @app.get("/rutina-completa", response_class=HTMLResponse)
 async def rutina_completa():
@@ -235,6 +254,7 @@ async def health_check():
         "status": "ok",
         "message": "🚀 Telegram Mini Apps Server is running",
         "available_apps": [
+            "registro",
             "rutina-completa",
             "perfil-avanzado", 
             "dashboard"
@@ -246,6 +266,7 @@ if __name__ == "__main__":
     
     print("🚀 Iniciando servidor de Mini Apps...")
     print("📱 Mini Apps disponibles:")
+    print("   📝 http://localhost:8001/registro")
     print("   🏋️ http://localhost:8001/rutina-completa")
     print("   👤 http://localhost:8001/perfil-avanzado")
     print("   📊 http://localhost:8001/dashboard")

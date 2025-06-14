@@ -345,111 +345,123 @@ class TelegramWebhookManagerService:
                 [{"text": "✅ NO, CANCELAR", "callback_data": "cancel_delete"}]
             ]
         }
+
+    @staticmethod
+    def _create_registration_keyboard():
+        """Crea el teclado para registro con Mini Web App"""
+        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
+        return {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "✨ ¡Completar Registro!",
+                        "web_app": {"url": f"{webapp_base_url}/registro"}
+                    }
+                ],
+                [
+                    {"text": "ℹ️ ¿Qué es esto?", "callback_data": "info_registro"}
+                ]
+            ]
+        }
+
+    @staticmethod
+    def _show_registration_webapp(chat_id: int, first_name: str):
+        """Muestra la Mini Web App de registro"""
+        message = (
+            f"╭─────────────────────────╮\n"
+            f"│  <b>🎉 ¡EXCELENTE! 🎉</b>  │\n"
+            f"╰─────────────────────────╯\n\n"
+            f"✨ <b>¡Perfecto {first_name}!</b> ✨\n\n"
+            f"🚀 <b>Ahora vamos a registrarte</b>\n"
+            f"<b>con nuestro formulario</b>\n"
+            f"<b>súper fácil y rápido</b>\n\n"
+            f"📱 <b>Características:</b>\n"
+            f"• 🎨 Interfaz moderna y elegante\n"
+            f"• ⚡ Validación en tiempo real\n"
+            f"• 🔄 Progreso visual\n"
+            f"• 🎉 Animaciones fluidas\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│ 👆 <b>Toca el botón de abajo</b>  │\n"
+            f"│   <b>para abrir el formulario</b>  │\n"
+            f"└─────────────────────────┘"
+        )
+        keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
     
     @staticmethod
     def _handle_not_registered_user(chat_id: int, text: str, from_user: dict):
-        """Maneja usuarios no registrados"""
+        """Maneja usuarios no registrados - ahora usa Mini Web App"""
         if text and text.lower() == "/registrar":
-            # Crear usuario en estado de espera del nombre
+            # Crear usuario en estado de preparación para registrarse
             user = TelegramUserSchema(
                 chat_id=chat_id,
                 user_id=from_user.get("id"),
                 username=from_user.get("username"),
                 first_name=from_user.get("first_name"),
                 last_name=from_user.get("last_name"),
-                registration_state=UserRegistrationState.WAITING_NAME,
+                registration_state=UserRegistrationState.NOT_REGISTERED,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
             TelegramWebhookManagerService._save_user(user)
             
-            # Enviar mensaje pidiendo el nombre con diseño mejorado
-            message = (
-                f"╭─────────────────────────╮\n"
-                f"│  <b>🎉 ¡GENIAL! 🎉</b>  │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"✨ <b>Vamos a registrarte en</b>\n"
-                f"<b>nuestra aplicación</b> ✨\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│ 📝 Para comenzar, compárteme │\n"
-                f"│    tu <b>nombre completo:</b>     │\n"
-                f"└─────────────────────────┘"
-            )
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+            # Mostrar Mini Web App de registro
+            TelegramWebhookManagerService._show_registration_webapp(chat_id, from_user.get("first_name", "Usuario"))
         else:
-            # Usuario no registrado, pedirle que se registre
+            # Usuario no registrado, mostrar bienvenida con Mini Web App
+            first_name = from_user.get("first_name", "Usuario")
             message = (
                 f"╭─────────────────────────╮\n"
-                f"│  <b>👋 ¡HOLA! 👋</b>  │\n"
+                f"│  <b>👋 ¡HOLA {first_name.upper()}! 👋</b>  │\n"
                 f"╰─────────────────────────╯\n\n"
                 f"🌟 <b>¡Bienvenido a FitBot!</b> 🌟\n\n"
-                f"💪 Para comenzar necesitas registrarte\n\n"
+                f"✨ <b>Tu entrenador personal virtual</b> ✨\n\n"
+                f"💪 Para acceder a todas las funciones\n"
+                f"necesitas completar tu registro\n\n"
                 f"┌─────────────────────────┐\n"
-                f"│   🎯 <b>Escribe /registrar</b>   │\n"
-                f"│     <b>para comenzar</b>     │\n"
+                f"│ 🚀 <b>¡Es súper rápido y fácil!</b> │\n"
+                f"│   <b>Solo toma 30 segundos</b>    │\n"
                 f"└─────────────────────────┘"
             )
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+            # Crear teclado con botón de registro usando Mini Web App
+            keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
     
     @staticmethod
     def _handle_waiting_name(chat_id: int, text: str, user: TelegramUserSchema):
-        """Maneja el estado de espera del nombre"""
-        if not text or len(text.strip()) < 2:
-            message = "Por favor, ingresa un nombre válido (mínimo 2 caracteres):"
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
-            return
-        
-        # Guardar nombre y cambiar estado
-        user.name = text.strip()
-        user.registration_state = UserRegistrationState.WAITING_AGE
-        user.updated_at = datetime.utcnow()
-        TelegramWebhookManagerService._save_user(user)
-        
-        # Pedir edad
+        """Redirige al registro con Mini Web App - método legacy"""
         message = (
-            f"¡Perfecto, {user.name}! 😊\n\n"
-            "Ahora necesito que me compartas tu <b>edad</b> (solo números):"
+            f"╭─────────────────────────╮\n"
+            f"│  <b>🚀 NUEVO REGISTRO 🚀</b>  │\n"
+            f"╰─────────────────────────╯\n\n"
+            f"✨ <b>¡Ahora tenemos un nuevo</b>\n"
+            f"<b>sistema de registro!</b> ✨\n\n"
+            f"🎯 <b>Más fácil, rápido y elegante</b>\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│ 👆 <b>Usa el botón de abajo</b>  │\n"
+            f"│   <b>para registrarte</b>     │\n"
+            f"└─────────────────────────┘"
         )
-        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
     
     @staticmethod
     def _handle_waiting_age(chat_id: int, text: str, user: TelegramUserSchema):
-        """Maneja el estado de espera de la edad"""
-        try:
-            age = int(text.strip())
-            if age < 13 or age > 120:
-                message = "Por favor, ingresa una edad válida (entre 13 y 120 años):"
-                TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
-                return
-            
-            # Completar registro
-            user.age = age
-            user.registration_state = UserRegistrationState.COMPLETED
-            user.registered_at = datetime.utcnow()
-            user.updated_at = datetime.utcnow()
-            TelegramWebhookManagerService._save_user(user)
-            
-            # Mensaje de bienvenida completo con diseño mejorado
-            welcome_message = (
-                f"╭─────────────────────────╮\n"
-                f"│ <b>🎉 ¡REGISTRO EXITOSO! 🎉</b> │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"✅ <b>¡Excelente, {user.name}!</b>\n\n"
-                f"🎊 <b>Tu registro se completó</b>\n"
-                f"<b>exitosamente</b> 🎊\n\n"
-                f"🔓 <b>Ahora tienes acceso completo</b>\n"
-                f"<b>a todas las funciones del bot</b>\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│   💪 <b>¿Listo para empezar</b>   │\n"
-                f"│    <b>tu rutina perfecta?</b>    │\n"
-                f"└─────────────────────────┘"
-            )
-            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, welcome_message, keyboard)
-            
-        except ValueError:
-            message = "Por favor, ingresa solo números para tu edad:"
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        """Redirige al registro con Mini Web App - método legacy"""
+        message = (
+            f"╭─────────────────────────╮\n"
+            f"│  <b>🚀 NUEVO REGISTRO 🚀</b>  │\n"
+            f"╰─────────────────────────╯\n\n"
+            f"✨ <b>¡Ahora tenemos un nuevo</b>\n"
+            f"<b>sistema de registro!</b> ✨\n\n"
+            f"🎯 <b>Más fácil, rápido y elegante</b>\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│ 👆 <b>Usa el botón de abajo</b>  │\n"
+            f"│   <b>para registrarte</b>     │\n"
+            f"└─────────────────────────┘"
+        )
+        keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
     
     @staticmethod
     def _handle_registered_user(chat_id: int, text: str, user: TelegramUserSchema):
@@ -835,6 +847,33 @@ class TelegramWebhookManagerService:
             )
             keyboard = TelegramWebhookManagerService._create_webapp_keyboard()
             TelegramWebhookManagerService._send_message_with_keyboard(chat_id, webapp_message, keyboard)
+        elif callback_data == "info_registro":
+            # Información sobre las Mini Web Apps
+            info_message = (
+                f"╭─────────────────────────╮\n"
+                f"│  <b>ℹ️ MINI WEB APPS ℹ️</b>  │\n"
+                f"╰─────────────────────────╯\n\n"
+                f"🚀 <b>¿Qué son las Mini Apps?</b>\n\n"
+                f"Las Mini Apps son aplicaciones web\n"
+                f"integradas directamente en Telegram\n"
+                f"que ofrecen una experiencia más\n"
+                f"rica e interactiva.\n\n"
+                f"✨ <b>Ventajas de nuestro registro:</b>\n"
+                f"• 🎨 Interfaz moderna y elegante\n"
+                f"• 📱 Diseño responsive para móvil\n"
+                f"• ⚡ Validación en tiempo real\n"
+                f"• 🔄 Barra de progreso visual\n"
+                f"• 🎉 Animaciones fluidas\n"
+                f"• 🔒 100% seguro y privado\n\n"
+                f"🛡️ <b>Seguridad:</b>\n"
+                f"Tus datos nunca salen de Telegram\n"
+                f"y están completamente protegidos.\n\n"
+                f"┌─────────────────────────┐\n"
+                f"│ 🎯 <b>¡Pruébalo ahora mismo!</b> │\n"
+                f"└─────────────────────────┘"
+            )
+            keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, info_message, keyboard)
         elif callback_data in ["register_routine", "edit_routine", "view_routine"]:
             # Funcionalidades futuras
             future_message = (
@@ -870,7 +909,10 @@ class TelegramWebhookManagerService:
             
             logger.info(f"Datos recibidos de webapp: {data}")
             
-            if webapp_type == 'rutina_completa':
+            # Verificar si son datos de registro (detectar por la presencia de name y age)
+            if 'name' in data and 'age' in data and not webapp_type:
+                TelegramWebhookManagerService._handle_registration_data(chat_id, data, user)
+            elif webapp_type == 'rutina_completa':
                 TelegramWebhookManagerService._handle_rutina_completa_data(chat_id, data, user)
             elif webapp_type == 'perfil_avanzado':
                 TelegramWebhookManagerService._handle_perfil_avanzado_data(chat_id, data, user)
@@ -905,6 +947,75 @@ class TelegramWebhookManagerService:
             )
             TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
     
+    @staticmethod
+    def _handle_registration_data(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja datos específicos de registro de usuario desde la Mini Web App"""
+        try:
+            name = data.get('name', '').strip()
+            age = int(data.get('age', 0))
+            
+            # Validar datos
+            if not name or len(name) < 2:
+                error_message = (
+                    f"❌ <b>Error en el registro</b>\n\n"
+                    f"El nombre debe tener al menos 2 caracteres.\n"
+                    f"Por favor, intenta de nuevo."
+                )
+                keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+                TelegramWebhookManagerService._send_message_with_keyboard(chat_id, error_message, keyboard)
+                return
+            
+            if age < 13 or age > 120:
+                error_message = (
+                    f"❌ <b>Error en el registro</b>\n\n"
+                    f"La edad debe estar entre 13 y 120 años.\n"
+                    f"Por favor, intenta de nuevo."
+                )
+                keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+                TelegramWebhookManagerService._send_message_with_keyboard(chat_id, error_message, keyboard)
+                return
+            
+            # Completar registro
+            user.name = name
+            user.age = age
+            user.registration_state = UserRegistrationState.COMPLETED
+            user.registered_at = datetime.utcnow()
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            # Mensaje de éxito con diseño mejorado
+            success_message = (
+                f"╭─────────────────────────╮\n"
+                f"│ <b>🎉 ¡REGISTRO EXITOSO! 🎉</b> │\n"
+                f"╰─────────────────────────╯\n\n"
+                f"✨ <b>¡Excelente, {user.name}!</b> ✨\n\n"
+                f"🎊 <b>Tu registro se completó</b>\n"
+                f"<b>exitosamente usando nuestro</b>\n"
+                f"<b>formulario inteligente</b> 🎊\n\n"
+                f"📊 <b>Datos registrados:</b>\n"
+                f"• 👤 <b>Nombre:</b> {user.name}\n"
+                f"• 🎂 <b>Edad:</b> {user.age} años\n"
+                f"• 📅 <b>Fecha:</b> {user.registered_at.strftime('%d/%m/%Y %H:%M')}\n\n"
+                f"🔓 <b>Ahora tienes acceso completo</b>\n"
+                f"<b>a todas las funciones del bot</b>\n\n"
+                f"┌─────────────────────────┐\n"
+                f"│   💪 <b>¿Listo para empezar</b>   │\n"
+                f"│    <b>tu rutina perfecta?</b>    │\n"
+                f"└─────────────────────────┘"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, success_message, keyboard)
+            
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error procesando datos de registro: {e}")
+            error_message = (
+                f"❌ <b>Error en el registro</b>\n\n"
+                f"Los datos recibidos no son válidos.\n"
+                f"Por favor, intenta de nuevo."
+            )
+            keyboard = TelegramWebhookManagerService._create_registration_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, error_message, keyboard)
+
     @staticmethod
     def _handle_rutina_completa_data(chat_id: int, data: dict, user: TelegramUserSchema):
         """Maneja datos específicos de rutina completa"""
