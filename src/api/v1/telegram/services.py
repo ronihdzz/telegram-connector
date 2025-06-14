@@ -211,7 +211,7 @@ class TelegramWebhookManagerService:
         logger.info("📥 Webhook recibido")
 
         # Nunca logues secretos ni tokens completos
-        if x_telegram_bot_api_secret_token != settings.BOT_MANAGER_TOKEN:
+        if x_telegram_bot_api_secret_token != settings.BOT_MANAGER_SECRET:
             logger.warning("Token inválido en webhook (NO SE MUESTRA POR SEGURIDAD)")
             raise HTTPException(status_code=403, detail="Invalid secret")
         logger.info("Token válido (secreto verificado)")
