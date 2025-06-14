@@ -212,8 +212,37 @@ class SendMessageService:
 
 
 
-# Simulación de base de datos con diccionario (más tarde se reemplazará por MongoDB)
-users_db = {}
+# --- Base de datos de usuarios en archivo JSON ---
+DB_FILE = "users_db.json"
+
+def _load_users_from_file() -> dict[int, TelegramUserSchema]:
+    """Carga los usuarios desde un archivo JSON."""
+    try:
+        with open(DB_FILE, "r") as f:
+            data = json.load(f)
+            # Reconstruir el enum y datetime al cargar
+            for k, v in data.items():
+                v['registration_state'] = UserRegistrationState(v['registration_state'])
+                if v.get('registered_at'):
+                    v['registered_at'] = datetime.fromisoformat(v['registered_at'])
+                v['created_at'] = datetime.fromisoformat(v['created_at'])
+                v['updated_at'] = datetime.fromisoformat(v['updated_at'])
+            return {int(k): TelegramUserSchema(**v) for k, v in data.items()}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def _save_users_to_file(users: dict[int, TelegramUserSchema]):
+    """Guarda los usuarios en un archivo JSON."""
+    with open(DB_FILE, "w") as f:
+        # Convertir a un formato serializable
+        serializable_users = {
+            k: v.model_dump(mode="json") for k, v in users.items()
+        }
+        json.dump(serializable_users, f, indent=4, ensure_ascii=False)
+
+# Cargar usuarios al iniciar
+users_db = _load_users_from_file()
+logger.info(f"{len(users_db)} usuarios cargados desde {DB_FILE}")
 
 class TelegramWebhookManagerService:
     
@@ -265,13 +294,14 @@ class TelegramWebhookManagerService:
     
     @staticmethod
     def _get_user(chat_id: int) -> TelegramUserSchema | None:
-        """Obtiene un usuario del diccionario simulado"""
+        """Obtiene un usuario de la base de datos en memoria."""
         return users_db.get(chat_id)
-    
+
     @staticmethod
     def _save_user(user: TelegramUserSchema):
-        """Guarda un usuario en el diccionario simulado"""
+        """Guarda un usuario en la base de datos en memoria y en el archivo."""
         users_db[user.chat_id] = user
+        _save_users_to_file(users_db)
         logger.info(f"Usuario guardado: chat_id={user.chat_id}, estado={user.registration_state}")
     
     @staticmethod
@@ -346,17 +376,16 @@ class TelegramWebhookManagerService:
         """Crea el teclado para registro con Mini Web App"""
         webapp_base_url = settings.WEBAPP_BASE_URL
         return {
-            "inline_keyboard": [
+            "keyboard": [
                 [
                     {
                         "text": "✨ ¡Completar Registro!",
-                        "web_app": {"url": f"{webapp_base_url}/registro"}
+                        "web_app": {"url": f"{webapp_base_url}/registro.html"}
                     }
-                ],
-                [
-                    {"text": "ℹ️ ¿Qué es esto?", "callback_data": "info_registro"}
                 ]
-            ]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": True
         }
 
     @staticmethod
@@ -470,42 +499,45 @@ class TelegramWebhookManagerService:
     
     @staticmethod
     def _show_user_profile(chat_id: int, user: TelegramUserSchema):
-        """Muestra el perfil del usuario"""
+        """Muestra el perfil del usuario con opción para editar."""
         registered_date = user.registered_at.strftime("%d/%m/%Y a las %H:%M") if user.registered_at else "No disponible"
         
-        # Perfil simplificado
         profile_message = (
             f"👤 <b>Mi Perfil</b>\n\n"
             f"<b>Nombre:</b> {user.name}\n"
             f"<b>Edad:</b> {user.age} años\n"
             f"<b>Chat ID:</b> {user.chat_id}\n"
-            f"<b>Registrado:</b> {registered_date}"
+            f"<b>Registrado:</b> {registered_date}\n\n"
+            f"Pulsa el botón para editar tu información."
         )
         
-        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, profile_message, keyboard)
+        keyboard = TelegramWebhookManagerService._create_profile_webapp_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, profile_message, keyboard)
 
     @staticmethod
-    def _show_settings(chat_id: int, user: TelegramUserSchema):
-        """Muestra la webapp de settings"""
+    def _create_settings_keyboard():
+        """Crea el teclado para el menú de settings."""
         webapp_base_url = settings.WEBAPP_BASE_URL
-        
-        message = (
-            f"⚙️ <b>Settings</b>\n\n"
-            f"Configura tu cuenta y preferencias:"
-        )
-        
-        keyboard = {
+        return {
             "inline_keyboard": [
                 [
-                    {
-                        "text": "⚙️ Abrir Settings",
-                        "web_app": {"url": f"{webapp_base_url}/settings"}
-                    }
+                    {"text": "🌐 Cambiar idioma", "callback_data": "change_language"}
+                ],
+                [
+                    {"text": "🗑️ Eliminar cuenta", "web_app": {"url": f"{webapp_base_url}/settings.html?action=delete"}}
                 ]
             ]
         }
-        
+
+    @staticmethod
+    def _show_settings(chat_id: int, user: TelegramUserSchema):
+        """Muestra el menú de settings."""
+        message = (
+            f"⚙️ <b>Settings</b>\n\n"
+            f"Aquí puedes gestionar tu cuenta.\n\n"
+            f"Selecciona una opción:"
+        )
+        keyboard = TelegramWebhookManagerService._create_settings_keyboard()
         TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
     
     @staticmethod
@@ -609,7 +641,8 @@ class TelegramWebhookManagerService:
         """Elimina el perfil del usuario"""
         if chat_id in users_db:
             del users_db[chat_id]
-            logger.info(f"Perfil eliminado para chat_id={chat_id}")
+            _save_users_to_file(users_db)
+            logger.info(f"Cuenta eliminada para chat_id={chat_id}")
         
         farewell_message = (
             f"╭─────────────────────────╮\n"
@@ -745,6 +778,12 @@ class TelegramWebhookManagerService:
         # Manejar diferentes callbacks
         if callback_data == "my_profile":
             TelegramWebhookManagerService._show_user_profile(chat_id, user)
+        elif callback_data == "change_language":
+            message = (
+                f"🌐 <b>Cambiar idioma</b>\n\n"
+                f"Esta funcionalidad aún no está disponible, ¡pero llegará pronto!"
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
         elif callback_data == "edit_profile":
             TelegramWebhookManagerService._show_edit_options(chat_id, user)
         elif callback_data == "edit_name":
@@ -1092,29 +1131,29 @@ class TelegramWebhookManagerService:
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
         TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
 
-    @staticmethod
-    def _handle_delete_account(chat_id: int, data: dict, user: TelegramUserSchema):
-        """Maneja la eliminación de cuenta desde settings webapp"""
-        if data.get('confirmed'):
-            # Eliminar usuario
-            if chat_id in users_db:
-                del users_db[chat_id]
-                logger.info(f"Cuenta eliminada para chat_id={chat_id}")
-            
-            message = (
-                f"✅ <b>Cuenta eliminada</b>\n\n"
-                f"Tu cuenta ha sido eliminada exitosamente.\n"
-                f"Esperamos verte de nuevo pronto."
-            )
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
-        else:
-            message = (
-                f"❌ <b>Eliminación cancelada</b>\n\n"
-                f"Tu cuenta no ha sido eliminada."
-            )
-            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
-    
+@staticmethod
+def _handle_delete_account(chat_id: int, data: dict, user: TelegramUserSchema):
+    """Maneja la eliminación de cuenta desde settings webapp"""
+    if data.get('confirmed'):
+        # Eliminar usuario
+        if chat_id in users_db:
+            del users_db[chat_id]
+            _save_users_to_file(users_db)
+            logger.info(f"Cuenta eliminada para chat_id={chat_id}")
+        
+        message = (
+            f"✅ <b>Cuenta eliminada</b>\n\n"
+            f"Tu cuenta ha sido eliminada exitosamente.\n"
+            f"Esperamos verte de nuevo pronto."
+        )
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+    else:
+        message = (
+            f"❌ <b>Eliminación cancelada</b>\n\n"
+            f"Tu cuenta no ha sido eliminada."
+        )
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
     @staticmethod
     def _handle_profile_update(chat_id: int, data: dict, user: TelegramUserSchema):
         """Maneja la actualización del perfil desde settings webapp"""
