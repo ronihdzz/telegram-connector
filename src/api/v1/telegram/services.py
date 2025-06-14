@@ -411,17 +411,9 @@ class TelegramWebhookManagerService:
             # Usuario no registrado, mostrar bienvenida con Mini Web App
             first_name = from_user.get("first_name", "Usuario")
             message = (
-                f"╭─────────────────────────╮\n"
-                f"│  <b>👋 ¡HOLA {first_name.upper()}! 👋</b>  │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"🌟 <b>¡Bienvenido a FitBot!</b> 🌟\n\n"
-                f"✨ <b>Tu entrenador personal virtual</b> ✨\n\n"
-                f"💪 Para acceder a todas las funciones\n"
-                f"necesitas completar tu registro\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│ 🚀 <b>¡Es súper rápido y fácil!</b> │\n"
-                f"│   <b>Solo toma 30 segundos</b>    │\n"
-                f"└─────────────────────────┘"
+                f"👋 <b>Hola {first_name}!</b>\n\n"
+                f"🏋️ <b>Bienvenido a GymBot</b>\n\n"
+                f"Para empezar necesitas registrarte:"
             )
             # Crear teclado con botón de registro usando Mini Web App
             keyboard = TelegramWebhookManagerService._create_registration_keyboard()
@@ -509,17 +501,18 @@ class TelegramWebhookManagerService:
             TelegramWebhookManagerService._send_message_with_keyboard(chat_id, webapp_message, keyboard)
             return
         
-        # Mensaje de bienvenida normal con diseño mejorado
+        # Comandos especiales para entrenamientos
+        if text.lower() in ["hoy", "/hoy"]:
+            TelegramWebhookManagerService._show_today_workout(chat_id, user)
+            return
+        elif text.lower() in ["entrenar", "/entrenar"]:
+            TelegramWebhookManagerService._show_training_session(chat_id, user)
+            return
+        
+        # Mensaje de bienvenida simplificado
         greeting_message = (
-            f"╭─────────────────────────╮\n"
-            f"│  <b>👋 ¡HOLA {user.name.upper()}! 👋</b>  │\n"
-            f"╰─────────────────────────╯\n\n"
-            f"🌟 <b>¡Bienvenido de vuelta!</b> 🌟\n\n"
-            f"💪 <b>¿Listo para entrenar hoy?</b>\n\n"
-            f"🚀 <i>Escribe</i> <code>/webapp</code> <i>para Mini Apps</i>\n\n"
-            f"┌─────────────────────────┐\n"
-            f"│   🎯 <b>¿Qué deseas hacer?</b>   │\n"
-            f"└─────────────────────────┘"
+            f"👋 <b>Hola {user.name}!</b>\n\n"
+            f"🏋️ <b>GymBot</b> - ¿Qué deseas hacer?"
         )
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
         TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
@@ -529,23 +522,13 @@ class TelegramWebhookManagerService:
         """Muestra el perfil del usuario"""
         registered_date = user.registered_at.strftime("%d/%m/%Y a las %H:%M") if user.registered_at else "No disponible"
         
-        # Diseño mejorado con marcos decorativos y mejor formato
+        # Perfil simplificado
         profile_message = (
-            f"╭─────────────────────────╮\n"
-            f"│    <b>✨ TU PERFIL ✨</b>    │\n"
-            f"╰─────────────────────────╯\n\n"
-            f"🏷️ <b>Nombre:</b>\n"
-            f"    <i>{user.name}</i>\n\n"
-            f"🎂 <b>Edad:</b>\n"
-            f"    <i>{user.age} años</i>\n\n"
-            f"📅 <b>Miembro desde:</b>\n"
-            f"    <i>{registered_date}</i>\n\n"
-            f"🆔 <b>ID del Chat:</b>\n"
-            f"    <code>{user.chat_id}</code>\n\n"
-            f"┌─────────────────────────┐\n"
-            f"│ 💡 <i>Tip: Usa /editardatos para</i>  │\n"
-            f"│    <i>actualizar tu información</i>    │\n"
-            f"└─────────────────────────┘"
+            f"👤 <b>Mi Perfil</b>\n\n"
+            f"<b>Nombre:</b> {user.name}\n"
+            f"<b>Edad:</b> {user.age} años\n"
+            f"<b>Chat ID:</b> {user.chat_id}\n"
+            f"<b>Registrado:</b> {registered_date}"
         )
         
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
@@ -1098,6 +1081,43 @@ class TelegramWebhookManagerService:
                 f"👤 <b>Usuario:</b> {user.name}\n\n"
                 f"🎯 <b>¡Información actualizada!</b>"
             )
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
+
+    @staticmethod
+    def _show_today_workout(chat_id: int, user: TelegramUserSchema):
+        """Muestra el entrenamiento programado para hoy"""
+        # Simular datos de localStorage (en producción esto vendría de base de datos)
+        today = datetime.utcnow().strftime('%d/%m/%Y')
+        
+        message = (
+            f"📅 <b>Entrenamiento de Hoy</b>\n\n"
+            f"<b>Fecha:</b> {today}\n\n"
+            f"🏋️ <b>Ejercicios programados:</b>\n"
+            f"• Press banca - 3x8-12\n"
+            f"• Sentadillas - 3x10-15\n"
+            f"• Dominadas - 3x5-8\n"
+            f"• Flexiones - 2x max\n\n"
+            f"💡 Escribe <b>entrenar</b> para registrar tu sesión"
+        )
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
+
+    @staticmethod
+    def _show_training_session(chat_id: int, user: TelegramUserSchema):
+        """Muestra la sesión de entrenamiento interactiva"""
+        message = (
+            f"🏋️ <b>Sesión de Entrenamiento</b>\n\n"
+            f"<b>Hola {user.name}!</b> Registra tu entrenamiento:\n\n"
+            f"📝 <b>Formato:</b>\n"
+            f"Ejercicio - Series x Repeticiones @ Peso\n\n"
+            f"<b>Ejemplo:</b>\n"
+            f"Press banca - 3x10 @ 60kg\n"
+            f"Sentadillas - 3x12 @ 80kg\n\n"
+            f"💪 Envía tu entrenamiento en ese formato"
+        )
         
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
         TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)

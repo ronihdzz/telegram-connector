@@ -15,7 +15,7 @@ from pathlib import Path
 # Crear aplicación FastAPI
 app = FastAPI(
     title="🚀 Telegram Mini Apps Server",
-    description="Servidor de desarrollo para Mini Apps de FitBot",
+    description="Servidor de desarrollo para Mini Apps de GymBot",
     version="1.0.0"
 )
 
@@ -43,7 +43,7 @@ async def root():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>🚀 Telegram Mini Apps - FitBot</title>
+        <title>🚀 Telegram Mini Apps - GymBot</title>
         <style>
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -127,7 +127,7 @@ async def root():
     <body>
         <div class="header">
             <h1>🚀 Telegram Mini Apps</h1>
-            <p>Servidor de desarrollo para FitBot Mini Apps</p>
+            <p>Servidor de desarrollo para GymBot Mini Apps</p>
         </div>
 
         <div class="apps-grid">

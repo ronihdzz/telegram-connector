@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👤 Perfil Avanzado - FitBot</title>
+    <title>👤 Perfil - GymBot</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -27,570 +27,368 @@
 
         .header {
             text-align: center;
-            margin-bottom: 24px;
-            padding: 20px;
-            background: linear-gradient(135deg, var(--tg-theme-button-color, #0088cc), #0066aa);
-            border-radius: 16px;
-            color: var(--tg-theme-button-text-color, #ffffff);
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--tg-theme-button-color, #0088cc);
+            border-radius: 12px;
+            color: white;
         }
 
         .header h1 {
-            font-size: 28px;
-            margin-bottom: 8px;
+            font-size: 24px;
+            margin-bottom: 4px;
         }
 
-        .header p {
-            opacity: 0.9;
-            font-size: 16px;
-        }
-
-        .profile-card {
+        .card {
             background: var(--tg-theme-secondary-bg-color, #f8f9fa);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 24px;
-            border: 2px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
         }
 
-        .profile-card h2 {
+        .card h2 {
             color: var(--tg-theme-text-color, #000000);
-            margin-bottom: 16px;
-            font-size: 20px;
+            margin-bottom: 12px;
+            font-size: 18px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
+        .profile-info {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 136, 204, 0.1);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--tg-theme-hint-color, #666);
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: var(--tg-theme-text-color, #000);
+        }
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
             color: var(--tg-theme-text-color, #000000);
-            font-size: 16px;
         }
 
         .form-control {
             width: 100%;
-            padding: 14px 16px;
-            border: 2px solid var(--tg-theme-button-color, #0088cc);
-            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 8px;
             font-size: 16px;
             background: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #000000);
-            transition: all 0.3s ease;
         }
 
         .form-control:focus {
             outline: none;
             border-color: var(--tg-theme-button-color, #0088cc);
-            box-shadow: 0 0 0 4px rgba(0, 136, 204, 0.1);
-            transform: translateY(-1px);
+            box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.1);
         }
 
-        .form-control::placeholder {
-            color: var(--tg-theme-hint-color, #999999);
-        }
-
-        select.form-control {
+        .btn {
+            width: 100%;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            margin-bottom: 8px;
         }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+        .btn:hover {
+            opacity: 0.9;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
+        .btn-secondary {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            color: var(--tg-theme-text-color, #000000);
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
         }
 
-        .stat-card {
+        .workouts-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .workout-item {
             background: var(--tg-theme-bg-color, #ffffff);
-            border: 2px solid var(--tg-theme-button-color, #0088cc);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
+            border: 1px solid rgba(0, 136, 204, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
         }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
+        .workout-date {
+            font-weight: 600;
             color: var(--tg-theme-button-color, #0088cc);
             margin-bottom: 4px;
         }
 
-        .stat-label {
-            font-size: 12px;
-            color: var(--tg-theme-hint-color, #999999);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .workout-exercises {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #666);
         }
 
-        .btn-submit {
-            width: 100%;
-            background: linear-gradient(135deg, var(--tg-theme-button-color, #0088cc), #0066aa);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 18px;
-            border-radius: 16px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 24px;
-            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+        .empty-state {
+            text-align: center;
+            color: var(--tg-theme-hint-color, #666);
+            padding: 20px;
         }
 
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 136, 204, 0.4);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .success-message, .error-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-weight: 500;
         }
 
         .success-message {
-            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            background: #d4edda;
             color: #155724;
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 2px solid #c3e6cb;
-            font-weight: 500;
+            border: 1px solid #c3e6cb;
         }
 
         .error-message {
-            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            background: #f8d7da;
             color: #721c24;
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 2px solid #f5c6cb;
-            font-weight: 500;
-        }
-
-        .input-group {
-            position: relative;
-        }
-
-        .input-group-text {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--tg-theme-hint-color, #999999);
-            font-size: 14px;
-            pointer-events: none;
-        }
-
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--tg-theme-bg-color, #ffffff);
-            border: 2px solid var(--tg-theme-button-color, #0088cc);
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .checkbox-item:hover {
-            background: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-        }
-
-        .checkbox-item input[type="checkbox"] {
-            display: none;
-        }
-
-        .checkbox-item input[type="checkbox"]:checked + .checkbox-item {
-            background: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-        }
-
-        @media (max-width: 480px) {
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>👤 Perfil Avanzado</h1>
-            <p>Completa tu información para una experiencia personalizada</p>
+            <h1>👤 Mi Perfil</h1>
+            <p>GymBot</p>
         </div>
 
-        <div id="messages"></div>
-
-        <form id="perfilForm">
-            <!-- Información Básica -->
-            <div class="profile-card">
-                <h2>📝 Información Básica</h2>
-                
-                <div class="form-group">
-                    <label for="nombre">Nombre Completo</label>
-                    <input type="text" id="nombre" class="form-control" placeholder="Tu nombre completo" required>
+        <!-- Información del Perfil -->
+        <div class="card">
+            <h2>📋 Información Personal</h2>
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="info-label">Nombre:</span>
+                    <span class="info-value" id="userName">-</span>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="edad">Edad</label>
-                        <input type="number" id="edad" class="form-control" placeholder="25" min="13" max="120" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="genero">Género</label>
-                        <select id="genero" class="form-control" required>
-                            <option value="">Seleccionar</option>
-                            <option value="masculino">👨 Masculino</option>
-                            <option value="femenino">👩 Femenino</option>
-                            <option value="otro">🏳️‍⚧️ Otro</option>
-                            <option value="prefiero_no_decir">🤐 Prefiero no decir</option>
-                        </select>
-                    </div>
+                <div class="info-item">
+                    <span class="info-label">Edad:</span>
+                    <span class="info-value" id="userAge">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Chat ID:</span>
+                    <span class="info-value" id="chatId">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Registrado:</span>
+                    <span class="info-value" id="registerDate">-</span>
                 </div>
             </div>
+            <button class="btn" onclick="editProfile()">✏️ Editar Perfil</button>
+        </div>
 
-            <!-- Información Física -->
-            <div class="profile-card">
-                <h2>📏 Información Física</h2>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="peso">Peso Actual</label>
-                        <div class="input-group">
-                            <input type="number" id="peso" class="form-control" placeholder="70" min="30" max="300" step="0.1" required>
-                            <span class="input-group-text">kg</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="altura">Altura</label>
-                        <div class="input-group">
-                            <input type="number" id="altura" class="form-control" placeholder="175" min="100" max="250" required>
-                            <span class="input-group-text">cm</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="peso_objetivo">Peso Objetivo</label>
-                        <div class="input-group">
-                            <input type="number" id="peso_objetivo" class="form-control" placeholder="65" min="30" max="300" step="0.1">
-                            <span class="input-group-text">kg</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="nivel_actividad">Nivel de Actividad</label>
-                        <select id="nivel_actividad" class="form-control" required>
-                            <option value="">Seleccionar</option>
-                            <option value="sedentario">😴 Sedentario</option>
-                            <option value="ligero">🚶 Ligero (1-3 días/semana)</option>
-                            <option value="moderado">🏃 Moderado (3-5 días/semana)</option>
-                            <option value="activo">💪 Activo (6-7 días/semana)</option>
-                            <option value="muy_activo">🏋️ Muy Activo (2x/día)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Estadísticas calculadas -->
-                <div class="stats-grid" id="statsGrid" style="display: none;">
-                    <div class="stat-card">
-                        <div class="stat-value" id="imcValue">--</div>
-                        <div class="stat-label">IMC</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="tmrValue">--</div>
-                        <div class="stat-label">TMR</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="caloriasValue">--</div>
-                        <div class="stat-label">Calorías/día</div>
-                    </div>
+        <!-- Mis Entrenamientos -->
+        <div class="card">
+            <h2>🏋️ Mis Entrenamientos</h2>
+            <div class="workouts-list" id="workoutsList">
+                <div class="empty-state">
+                    <p>No tienes entrenamientos registrados</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Objetivos Fitness -->
-            <div class="profile-card">
-                <h2>🎯 Objetivos Fitness</h2>
-                
-                <div class="form-group">
-                    <label for="objetivo_principal">Objetivo Principal</label>
-                    <select id="objetivo_principal" class="form-control" required>
-                        <option value="">Seleccionar objetivo</option>
-                        <option value="perder_peso">⚖️ Perder Peso</option>
-                        <option value="ganar_musculo">💪 Ganar Músculo</option>
-                        <option value="mantener_peso">⚖️ Mantener Peso</option>
-                        <option value="mejorar_resistencia">🏃 Mejorar Resistencia</option>
-                        <option value="aumentar_fuerza">🏋️ Aumentar Fuerza</option>
-                        <option value="tonificar">✨ Tonificar</option>
-                        <option value="rehabilitacion">🏥 Rehabilitación</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Áreas de Enfoque</label>
-                    <div class="checkbox-group">
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="pecho">
-                            💪 Pecho
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="espalda">
-                            🔙 Espalda
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="brazos">
-                            💪 Brazos
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="piernas">
-                            🦵 Piernas
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="abdomen">
-                            🔥 Abdomen
-                        </label>
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="areas_enfoque" value="cardio">
-                            ❤️ Cardio
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="experiencia">Experiencia en Fitness</label>
-                    <select id="experiencia" class="form-control" required>
-                        <option value="">Seleccionar nivel</option>
-                        <option value="principiante">🌱 Principiante (0-6 meses)</option>
-                        <option value="intermedio">🌿 Intermedio (6 meses - 2 años)</option>
-                        <option value="avanzado">🌳 Avanzado (2+ años)</option>
-                        <option value="experto">🏆 Experto (5+ años)</option>
-                    </select>
-                </div>
+        <!-- Registrar Entrenamiento del Día -->
+        <div class="card">
+            <h2>📝 Registrar Entrenamiento de Hoy</h2>
+            <div class="form-group">
+                <label>Ejercicios (uno por línea):</label>
+                <textarea class="form-control" id="todayExercises" rows="4" 
+                    placeholder="Ej:&#10;Press banca&#10;Sentadillas&#10;Dominadas"></textarea>
             </div>
+            <button class="btn" onclick="saveTodayWorkout()">💾 Guardar Entrenamiento</button>
+        </div>
 
-            <button type="submit" class="btn-submit" id="submitBtn">
-                💾 Guardar Perfil Avanzado
-            </button>
-        </form>
+        <!-- Modal de Edición -->
+        <div id="editModal" style="display: none;">
+            <div class="card">
+                <h2>✏️ Editar Perfil</h2>
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" class="form-control" id="editName" placeholder="Tu nombre">
+                </div>
+                <div class="form-group">
+                    <label>Edad:</label>
+                    <input type="number" class="form-control" id="editAge" placeholder="Tu edad" min="1" max="120">
+                </div>
+                <button class="btn" onclick="saveProfile()">💾 Guardar</button>
+                <button class="btn btn-secondary" onclick="cancelEdit()">❌ Cancelar</button>
+            </div>
+        </div>
+
+        <div id="messageContainer"></div>
     </div>
 
     <script>
-        // Inicializar Telegram Web App
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
+        // Inicializar Telegram WebApp
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
 
-        // Configurar tema
-        document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
+        // Datos del usuario
+        let userData = {};
+        let workouts = [];
 
-        function mostrarMensaje(mensaje, tipo = 'success') {
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = tipo === 'success' ? 'success-message' : 'error-message';
-            messageDiv.textContent = mensaje;
-            messagesDiv.innerHTML = '';
-            messagesDiv.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-
-        function calcularEstadisticas() {
-            const peso = parseFloat(document.getElementById('peso').value);
-            const altura = parseFloat(document.getElementById('altura').value);
-            const edad = parseInt(document.getElementById('edad').value);
-            const genero = document.getElementById('genero').value;
-            const nivelActividad = document.getElementById('nivel_actividad').value;
-
-            if (peso && altura && edad && genero) {
-                // Calcular IMC
-                const alturaM = altura / 100;
-                const imc = peso / (alturaM * alturaM);
+        // Cargar datos iniciales
+        function loadUserData() {
+            const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (tgUser) {
+                document.getElementById('userName').textContent = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+                document.getElementById('chatId').textContent = tgUser.id;
                 
-                // Calcular TMR (Tasa Metabólica en Reposo)
-                let tmr;
-                if (genero === 'masculino') {
-                    tmr = 88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad);
+                // Cargar datos guardados del localStorage
+                const saved = localStorage.getItem('gymbot_profile_' + tgUser.id);
+                if (saved) {
+                    userData = JSON.parse(saved);
+                    document.getElementById('userAge').textContent = userData.age || '-';
+                    document.getElementById('registerDate').textContent = userData.registerDate || new Date().toLocaleDateString();
                 } else {
-                    tmr = 447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad);
+                    document.getElementById('registerDate').textContent = new Date().toLocaleDateString();
                 }
-
-                // Calcular calorías diarias según nivel de actividad
-                const factoresActividad = {
-                    'sedentario': 1.2,
-                    'ligero': 1.375,
-                    'moderado': 1.55,
-                    'activo': 1.725,
-                    'muy_activo': 1.9
-                };
                 
-                const calorias = tmr * (factoresActividad[nivelActividad] || 1.2);
-
-                // Mostrar estadísticas
-                document.getElementById('imcValue').textContent = imc.toFixed(1);
-                document.getElementById('tmrValue').textContent = Math.round(tmr);
-                document.getElementById('caloriasValue').textContent = Math.round(calorias);
-                document.getElementById('statsGrid').style.display = 'grid';
+                loadWorkouts();
             }
         }
 
-        // Event listeners para cálculo automático
-        ['peso', 'altura', 'edad', 'genero', 'nivel_actividad'].forEach(id => {
-            document.getElementById(id).addEventListener('input', calcularEstadisticas);
-            document.getElementById(id).addEventListener('change', calcularEstadisticas);
-        });
-
-        // Manejar envío del formulario
-        document.getElementById('perfilForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Guardando perfil...';
-            
-            try {
-                // Recopilar datos del formulario
-                const formData = new FormData(this);
-                
-                // Obtener áreas de enfoque seleccionadas
-                const areasEnfoque = Array.from(document.querySelectorAll('input[name="areas_enfoque"]:checked'))
-                    .map(checkbox => checkbox.value);
-                
-                // Preparar datos del perfil
-                const perfilData = {
-                    type: 'perfil_avanzado',
-                    perfil: {
-                        // Información básica
-                        nombre: document.getElementById('nombre').value,
-                        edad: parseInt(document.getElementById('edad').value),
-                        genero: document.getElementById('genero').value,
-                        
-                        // Información física
-                        peso: parseFloat(document.getElementById('peso').value),
-                        altura: parseInt(document.getElementById('altura').value),
-                        peso_objetivo: parseFloat(document.getElementById('peso_objetivo').value) || null,
-                        nivel_actividad: document.getElementById('nivel_actividad').value,
-                        
-                        // Objetivos
-                        objetivo_principal: document.getElementById('objetivo_principal').value,
-                        areas_enfoque: areasEnfoque,
-                        experiencia: document.getElementById('experiencia').value,
-                        
-                        // Estadísticas calculadas
-                        imc: parseFloat(document.getElementById('imcValue').textContent) || null,
-                        tmr: parseInt(document.getElementById('tmrValue').textContent) || null,
-                        calorias_diarias: parseInt(document.getElementById('caloriasValue').textContent) || null,
-                        
-                        fecha_actualizacion: new Date().toISOString()
-                    }
-                };
-                
-                // Validaciones básicas
-                if (!perfilData.perfil.nombre || !perfilData.perfil.edad || !perfilData.perfil.peso) {
-                    throw new Error('Por favor completa todos los campos obligatorios');
+        // Cargar entrenamientos
+        function loadWorkouts() {
+            const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (tgUser) {
+                const saved = localStorage.getItem('gymbot_workouts_' + tgUser.id);
+                if (saved) {
+                    workouts = JSON.parse(saved);
+                    displayWorkouts();
                 }
-                
-                if (perfilData.perfil.edad < 13 || perfilData.perfil.edad > 120) {
-                    throw new Error('La edad debe estar entre 13 y 120 años');
-                }
-                
-                // Enviar datos a Telegram
-                tg.sendData(JSON.stringify(perfilData));
-                
-                mostrarMensaje('✅ ¡Perfil guardado exitosamente!', 'success');
-                
-                // Cerrar la webapp después de un breve delay
-                setTimeout(() => {
-                    tg.close();
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarMensaje('❌ Error: ' + error.message, 'error');
-                
-                submitBtn.disabled = false;
-                submitBtn.textContent = '💾 Guardar Perfil Avanzado';
             }
-        });
+        }
 
-        // Configurar botón principal de Telegram
-        tg.MainButton.text = "💾 Guardar Perfil";
-        tg.MainButton.show();
-        
-        tg.MainButton.onClick(function() {
-            document.getElementById('perfilForm').dispatchEvent(new Event('submit'));
-        });
+        // Mostrar entrenamientos
+        function displayWorkouts() {
+            const container = document.getElementById('workoutsList');
+            if (workouts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No tienes entrenamientos registrados</p></div>';
+                return;
+            }
 
-        // Validación en tiempo real
-        document.getElementById('perfilForm').addEventListener('input', function() {
-            const requiredFields = ['nombre', 'edad', 'genero', 'peso', 'altura', 'nivel_actividad', 'objetivo_principal', 'experiencia'];
-            let isValid = true;
+            container.innerHTML = workouts.map(workout => `
+                <div class="workout-item">
+                    <div class="workout-date">${workout.date}</div>
+                    <div class="workout-exercises">${workout.exercises.join(', ')}</div>
+                </div>
+            `).join('');
+        }
+
+        // Editar perfil
+        function editProfile() {
+            document.getElementById('editName').value = document.getElementById('userName').textContent;
+            document.getElementById('editAge').value = document.getElementById('userAge').textContent !== '-' ? document.getElementById('userAge').textContent : '';
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Guardar perfil
+        function saveProfile() {
+            const name = document.getElementById('editName').value.trim();
+            const age = document.getElementById('editAge').value;
+
+            if (!name || !age) {
+                showMessage('Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (tgUser) {
+                userData = {
+                    name: name,
+                    age: age,
+                    registerDate: userData.registerDate || new Date().toLocaleDateString()
+                };
+
+                localStorage.setItem('gymbot_profile_' + tgUser.id, JSON.stringify(userData));
+                
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAge').textContent = age;
+                
+                cancelEdit();
+                showMessage('Perfil actualizado correctamente', 'success');
+            }
+        }
+
+        // Cancelar edición
+        function cancelEdit() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Guardar entrenamiento del día
+        function saveTodayWorkout() {
+            const exercisesText = document.getElementById('todayExercises').value.trim();
+            if (!exercisesText) {
+                showMessage('Agrega al menos un ejercicio', 'error');
+                return;
+            }
+
+            const exercises = exercisesText.split('\n').filter(ex => ex.trim()).map(ex => ex.trim());
+            const today = new Date().toLocaleDateString();
             
-            requiredFields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                if (!field.value) {
-                    isValid = false;
-                }
+            // Remover entrenamiento existente del día si existe
+            workouts = workouts.filter(w => w.date !== today);
+            
+            // Agregar nuevo entrenamiento
+            workouts.unshift({
+                date: today,
+                exercises: exercises
             });
-            
-            if (isValid) {
-                tg.MainButton.enable();
-                document.getElementById('submitBtn').disabled = false;
-            } else {
-                tg.MainButton.disable();
-                document.getElementById('submitBtn').disabled = true;
-            }
-        });
 
-        // Configurar botón de retroceso
-        tg.BackButton.show();
-        tg.BackButton.onClick(function() {
-            tg.close();
-        });
-
-        // Cargar datos del usuario si están disponibles
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            const user = tg.initDataUnsafe.user;
-            if (user.first_name) {
-                document.getElementById('nombre').value = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (tgUser) {
+                localStorage.setItem('gymbot_workouts_' + tgUser.id, JSON.stringify(workouts));
+                displayWorkouts();
+                document.getElementById('todayExercises').value = '';
+                showMessage('Entrenamiento guardado para hoy', 'success');
             }
         }
 
-        console.log('👤 Perfil Avanzado Mini App cargada correctamente');
+        // Mostrar mensaje
+        function showMessage(text, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="${type}-message">${text}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Cargar datos al iniciar
+        loadUserData();
     </script>
 </body>
 </html> 
