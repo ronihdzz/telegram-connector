@@ -380,7 +380,7 @@ class TelegramWebhookManagerService:
                 [
                     {
                         "text": "✨ ¡Completar Registro!",
-                        "web_app": {"url": f"{webapp_base_url}/registro.html"}
+                        "web_app": {"url": f"{webapp_base_url}/registro"}
                     }
                 ]
             ],
@@ -433,9 +433,9 @@ class TelegramWebhookManagerService:
             TelegramWebhookManagerService._show_registration_webapp(chat_id, from_user.get("first_name", "Usuario"))
         else:
             # Usuario no registrado, mostrar bienvenida con Mini Web App
-            first_name = from_user.get("first_name", "Usuario")
+            # first_name = from_user.get("first_name", "Usuario")
             message = (
-                f"👋 <b>Hola {first_name}!</b>\n\n"
+                f"👋 <b>Hola!</b>\n\n"
                 f"🏋️ <b>Bienvenido a GymBot</b>\n\n"
                 f"Para empezar necesitas registrarte:"
             )
