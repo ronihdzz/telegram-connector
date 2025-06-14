@@ -21,7 +21,7 @@ async def connect_telegram(
 async def webhook_manager(
     request: Request,
     x_telegram_bot_api_secret_token: str | None = Header(None)
-) -> EnvelopeResponse:
+):
     return await TelegramWebhookManagerService.webhook_manager(request, x_telegram_bot_api_secret_token)
 
 
