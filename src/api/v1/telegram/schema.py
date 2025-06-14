@@ -1,6 +1,30 @@
 from pydantic import BaseModel, Field, ConfigDict, field_serializer
 from uuid import UUID
 from datetime import datetime
+from enum import Enum
+
+# ---------- Estados de registro ----------
+class UserRegistrationState(str, Enum):
+    NOT_REGISTERED = "not_registered"
+    WAITING_NAME = "waiting_name"
+    WAITING_AGE = "waiting_age"
+    COMPLETED = "completed"
+    EDITING_NAME = "editing_name"
+    EDITING_AGE = "editing_age"
+
+# ---------- Usuario Schema ----------
+class TelegramUserSchema(BaseModel):
+    chat_id: int
+    user_id: int | None = None
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    name: str | None = None
+    age: int | None = None
+    registration_state: UserRegistrationState = UserRegistrationState.NOT_REGISTERED
+    registered_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
 
 # ---------- 1. DTO de conexión ----------
 class RequestTelegramConnectorCreateSchema(BaseModel):

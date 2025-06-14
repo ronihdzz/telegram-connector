@@ -9,7 +9,9 @@ from api.v1.telegram.schema import (
     TelegramConnectorCreateSchema,
     WebhookMessageReceived,
     TelegramConnectorCreateResponseSchema,
-    WebhookManagerIn
+    WebhookManagerIn,
+    TelegramUserSchema,
+    UserRegistrationState
 )
 import requests
 import secrets
@@ -115,8 +117,15 @@ class TelegramWebhookService:
         logger.info("Token válido (secreto verificado)")
 
         message_received = await request.json()
-        logger.debug(f"message_received: {str(message_received)[:500]}")  # Loguea máx 500 chars
+        logger.debug(f"message_received: {str(message_received)[:500]}")
 
+        # Verificar si es un callback query (botón presionado)
+        callback_query = message_received.get("callback_query")
+        if callback_query:
+            await TelegramWebhookManagerService._handle_callback_query(callback_query)
+            return {"status": "ok"}
+
+        # Verificar si es un mensaje o mensaje editado
         message = message_received.get("message") or message_received.get("edited_message")
         if not message:
             logger.info("⚠️ Update ignorado - no es un mensaje")
@@ -202,7 +211,257 @@ class SendMessageService:
 
 
 
+# Simulación de base de datos con diccionario (más tarde se reemplazará por MongoDB)
+users_db = {}
+
 class TelegramWebhookManagerService:
+    
+    @staticmethod
+    def _send_message_to_telegram(chat_id: int, text: str, reply_markup: dict = None) -> dict:
+        """Envía un mensaje a Telegram con opciones de teclado inline"""
+        TG_API = f"https://api.telegram.org/bot{settings.BOT_MANAGER_TOKEN}"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML"
+        }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+            
+        logger.info(f"Enviando mensaje a chat_id={chat_id}")
+        r = requests.post(f"{TG_API}/sendMessage", json=payload, timeout=10)
+        data = r.json()
+        
+        if not data.get("ok"):
+            logger.error(f"Telegram error: {data.get('description', 'Unknown error')}")
+            raise HTTPException(status_code=502, detail=data.get("description"))
+        
+        logger.info(f"Mensaje enviado correctamente, message_id={data['result']['message_id']}")
+        return data
+    
+    @staticmethod
+    def _get_user(chat_id: int) -> TelegramUserSchema | None:
+        """Obtiene un usuario del diccionario simulado"""
+        return users_db.get(chat_id)
+    
+    @staticmethod
+    def _save_user(user: TelegramUserSchema):
+        """Guarda un usuario en el diccionario simulado"""
+        users_db[user.chat_id] = user
+        logger.info(f"Usuario guardado: chat_id={user.chat_id}, estado={user.registration_state}")
+    
+    @staticmethod
+    def _create_main_menu_keyboard():
+        """Crea el teclado principal con las opciones del menú"""
+        return {
+            "inline_keyboard": [
+                [{"text": "📝 Registrar Rutina", "callback_data": "register_routine"}],
+                [{"text": "✏️ Editar Rutina", "callback_data": "edit_routine"}],
+                [{"text": "👀 Ver Rutina", "callback_data": "view_routine"}],
+                [{"text": "👤 Mi Perfil", "callback_data": "my_profile"}],
+                [{"text": "⚙️ Editar Datos", "callback_data": "edit_profile"}]
+            ]
+        }
+    
+    @staticmethod
+    def _create_profile_edit_keyboard():
+        """Crea el teclado para editar perfil"""
+        return {
+            "inline_keyboard": [
+                [{"text": "✏️ Editar Nombre", "callback_data": "edit_name"}],
+                [{"text": "🎂 Editar Edad", "callback_data": "edit_age"}],
+                [{"text": "🔙 Volver al Menú", "callback_data": "back_to_menu"}]
+            ]
+        }
+    
+    @staticmethod
+    def _handle_not_registered_user(chat_id: int, text: str, from_user: dict):
+        """Maneja usuarios no registrados"""
+        if text and text.lower() == "/registrar":
+            # Crear usuario en estado de espera del nombre
+            user = TelegramUserSchema(
+                chat_id=chat_id,
+                user_id=from_user.get("id"),
+                username=from_user.get("username"),
+                first_name=from_user.get("first_name"),
+                last_name=from_user.get("last_name"),
+                registration_state=UserRegistrationState.WAITING_NAME,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            TelegramWebhookManagerService._save_user(user)
+            
+            # Enviar mensaje pidiendo el nombre
+            message = (
+                "¡Perfecto! 🎉 Vamos a registrarte en nuestra aplicación.\n\n"
+                "Para comenzar, por favor compárteme tu <b>nombre completo</b>:"
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        else:
+            # Usuario no registrado, pedirle que se registre
+            welcome_message = (
+                "¡Hola! 👋 Bienvenido a nuestro bot de rutinas.\n\n"
+                "Para poder usar todas las funciones, necesitas registrarte primero.\n\n"
+                "Para comenzar tu registro, escribe: <b>/registrar</b>"
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, welcome_message)
+    
+    @staticmethod
+    def _handle_waiting_name(chat_id: int, text: str, user: TelegramUserSchema):
+        """Maneja el estado de espera del nombre"""
+        if not text or len(text.strip()) < 2:
+            message = "Por favor, ingresa un nombre válido (mínimo 2 caracteres):"
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+            return
+        
+        # Guardar nombre y cambiar estado
+        user.name = text.strip()
+        user.registration_state = UserRegistrationState.WAITING_AGE
+        user.updated_at = datetime.utcnow()
+        TelegramWebhookManagerService._save_user(user)
+        
+        # Pedir edad
+        message = (
+            f"¡Perfecto, {user.name}! 😊\n\n"
+            "Ahora necesito que me compartas tu <b>edad</b> (solo números):"
+        )
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+    
+    @staticmethod
+    def _handle_waiting_age(chat_id: int, text: str, user: TelegramUserSchema):
+        """Maneja el estado de espera de la edad"""
+        try:
+            age = int(text.strip())
+            if age < 13 or age > 120:
+                message = "Por favor, ingresa una edad válida (entre 13 y 120 años):"
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+                return
+            
+            # Completar registro
+            user.age = age
+            user.registration_state = UserRegistrationState.COMPLETED
+            user.registered_at = datetime.utcnow()
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            # Mensaje de bienvenida completo
+            welcome_message = (
+                f"¡Excelente, {user.name}! 🎉\n\n"
+                "Tu registro se ha completado exitosamente. "
+                "Ahora puedes usar todas las funciones del bot.\n\n"
+                "<b>¿Qué deseas hacer?</b>"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, welcome_message, keyboard)
+            
+        except ValueError:
+            message = "Por favor, ingresa solo números para tu edad:"
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+    
+    @staticmethod
+    def _handle_registered_user(chat_id: int, text: str, user: TelegramUserSchema):
+        """Maneja usuarios ya registrados"""
+        # Comandos especiales
+        if text.lower() in ["/miperfil", "/perfil", "/datos"]:
+            TelegramWebhookManagerService._show_user_profile(chat_id, user)
+            return
+        elif text.lower() in ["/editarnombre", "/editaredad", "/editardatos"]:
+            TelegramWebhookManagerService._show_edit_options(chat_id, user)
+            return
+        
+        # Mensaje de bienvenida normal
+        greeting_message = (
+            f"¡Hola {user.name}! 👋\n\n"
+            "<b>¿Qué deseas hacer hoy?</b>"
+        )
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+    
+    @staticmethod
+    def _show_user_profile(chat_id: int, user: TelegramUserSchema):
+        """Muestra el perfil del usuario"""
+        registered_date = user.registered_at.strftime("%d/%m/%Y a las %H:%M") if user.registered_at else "No disponible"
+        
+        profile_message = (
+            f"👤 <b>Tu Perfil</b>\n\n"
+            f"📝 <b>Nombre:</b> {user.name}\n"
+            f"🎂 <b>Edad:</b> {user.age} años\n"
+            f"📅 <b>Registrado:</b> {registered_date}\n"
+            f"🆔 <b>Chat ID:</b> {user.chat_id}\n"
+            f"👤 <b>Username:</b> @{user.username or 'No disponible'}\n\n"
+            f"💡 <i>Puedes editar tu información usando /editardatos</i>"
+        )
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, profile_message, keyboard)
+    
+    @staticmethod
+    def _show_edit_options(chat_id: int, user: TelegramUserSchema):
+        """Muestra las opciones de edición"""
+        edit_message = (
+            f"⚙️ <b>Editar tu Información</b>\n\n"
+            f"📝 <b>Nombre actual:</b> {user.name}\n"
+            f"🎂 <b>Edad actual:</b> {user.age} años\n\n"
+            f"¿Qué deseas modificar?"
+        )
+        
+        keyboard = TelegramWebhookManagerService._create_profile_edit_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, edit_message, keyboard)
+    
+    @staticmethod
+    def _handle_editing_name(chat_id: int, text: str, user: TelegramUserSchema):
+        """Maneja la edición del nombre"""
+        if not text or len(text.strip()) < 2:
+            message = "Por favor, ingresa un nombre válido (mínimo 2 caracteres):"
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+            return
+        
+        old_name = user.name
+        user.name = text.strip()
+        user.registration_state = UserRegistrationState.COMPLETED
+        user.updated_at = datetime.utcnow()
+        TelegramWebhookManagerService._save_user(user)
+        
+        success_message = (
+            f"✅ <b>Nombre actualizado correctamente</b>\n\n"
+            f"📝 Nombre anterior: {old_name}\n"
+            f"📝 Nombre nuevo: {user.name}\n\n"
+            f"¿Qué deseas hacer ahora?"
+        )
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, success_message, keyboard)
+    
+    @staticmethod
+    def _handle_editing_age(chat_id: int, text: str, user: TelegramUserSchema):
+        """Maneja la edición de la edad"""
+        try:
+            age = int(text.strip())
+            if age < 13 or age > 120:
+                message = "Por favor, ingresa una edad válida (entre 13 y 120 años):"
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+                return
+            
+            old_age = user.age
+            user.age = age
+            user.registration_state = UserRegistrationState.COMPLETED
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            success_message = (
+                f"✅ <b>Edad actualizada correctamente</b>\n\n"
+                f"🎂 Edad anterior: {old_age} años\n"
+                f"🎂 Edad nueva: {user.age} años\n\n"
+                f"¿Qué deseas hacer ahora?"
+            )
+            
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, success_message, keyboard)
+            
+        except ValueError:
+            message = "Por favor, ingresa solo números para tu edad:"
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+
     @staticmethod
     async def webhook_manager(
         request: Request,
@@ -210,51 +469,143 @@ class TelegramWebhookManagerService:
     ) -> dict[str, str]:
         logger.info("📥 Webhook recibido")
 
-        # Nunca logues secretos ni tokens completos
+        # Verificación del token secreto
         if x_telegram_bot_api_secret_token != settings.BOT_MANAGER_SECRET:
             logger.warning("Token inválido en webhook (NO SE MUESTRA POR SEGURIDAD)")
             raise HTTPException(status_code=403, detail="Invalid secret")
         logger.info("Token válido (secreto verificado)")
 
         message_received = await request.json()
-        logger.debug(f"message_received: {str(message_received)[:500]}")  # Loguea máx 500 chars
+        logger.debug(f"message_received: {str(message_received)[:500]}")
 
+        # Verificar si es un callback query (botón presionado)
+        callback_query = message_received.get("callback_query")
+        if callback_query:
+            await TelegramWebhookManagerService._handle_callback_query(callback_query)
+            return {"status": "ok"}
+
+        # Verificar si es un mensaje o mensaje editado
         message = message_received.get("message") or message_received.get("edited_message")
         if not message:
             logger.info("⚠️ Update ignorado - no es un mensaje")
             return {"status": "ignored"}
 
-        # Procesa y loguea solo IDs/textos, nunca attachments
+        # Extraer información del mensaje
         chat_id = message.get("chat", {}).get("id")
-        webhook_message_received = WebhookManagerIn(
-            message_id=message.get("message_id"),
-            date=datetime.fromtimestamp(message.get("date", 0)),
-            text=message.get("text"),
-            caption=message.get("caption"),
-            photo=message.get("photo"),
-            sticker=message.get("sticker"),
-            chat_id=chat_id
-        )
+        text = message.get("text", "").strip()
+        from_user = message.get("from", {})
+        
+        logger.info(f"Recibido message_id={message.get('message_id')} chat_id={chat_id} text='{text[:50]}...'")
 
-        logger.info(f"Recibido message_id={webhook_message_received.message_id} chat_id={chat_id}")
-
-
-        # reply to the message
-        # ------------------------------------------------------------
-        logger.info(f"Enviando mensaje a chat_id={webhook_message_received.chat_id} con el bot {settings.BOT_MANAGER_TOKEN}")
-        logger.info(f"Mensaje: {webhook_message_received.text}")
-        TG_API = f"https://api.telegram.org/bot{settings.BOT_MANAGER_TOKEN}"
-        r = requests.post(
-            f"{TG_API}/sendMessage",
-            json={"chat_id": webhook_message_received.chat_id, "text": webhook_message_received.text},
-            timeout=10
-        )
-        data = r.json()
-        logger.debug(f"Respuesta de Telegram: {str(data)[:400]}")
-        if not data.get("ok"):
-            logger.error(f"Telegram error: {data.get('description', 'Unknown error')}")
-            raise HTTPException(status_code=502, detail=data.get("description"))
-        logger.info(f"Mensaje enviado correctamente, message_id={data['result']['message_id']}")
- 
+        # Obtener usuario existente o None
+        user = TelegramWebhookManagerService._get_user(chat_id)
+        
+        try:
+            if not user:
+                # Usuario no registrado
+                TelegramWebhookManagerService._handle_not_registered_user(chat_id, text, from_user)
+            elif user.registration_state == UserRegistrationState.WAITING_NAME:
+                # Esperando nombre
+                TelegramWebhookManagerService._handle_waiting_name(chat_id, text, user)
+            elif user.registration_state == UserRegistrationState.WAITING_AGE:
+                # Esperando edad
+                TelegramWebhookManagerService._handle_waiting_age(chat_id, text, user)
+            elif user.registration_state == UserRegistrationState.EDITING_NAME:
+                # Editando nombre
+                TelegramWebhookManagerService._handle_editing_name(chat_id, text, user)
+            elif user.registration_state == UserRegistrationState.EDITING_AGE:
+                # Editando edad
+                TelegramWebhookManagerService._handle_editing_age(chat_id, text, user)
+            elif user.registration_state == UserRegistrationState.COMPLETED:
+                # Usuario completamente registrado
+                TelegramWebhookManagerService._handle_registered_user(chat_id, text, user)
+            else:
+                # Estado no reconocido, resetear
+                logger.warning(f"Estado no reconocido: {user.registration_state}")
+                TelegramWebhookManagerService._handle_not_registered_user(chat_id, text, from_user)
+                
+        except Exception as e:
+            logger.error(f"Error procesando mensaje: {e}")
+            error_message = "Lo siento, ocurrió un error procesando tu mensaje. Por favor intenta de nuevo."
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
 
         return {"status": "ok"}
+
+    @staticmethod
+    async def _handle_callback_query(callback_query: dict):
+        """Maneja los callback queries (botones inline presionados)"""
+        callback_data = callback_query.get("data", "")
+        chat_id = callback_query.get("message", {}).get("chat", {}).get("id")
+        message_id = callback_query.get("message", {}).get("message_id")
+        from_user = callback_query.get("from", {})
+        
+        logger.info(f"Callback recibido: {callback_data} de chat_id={chat_id}")
+        
+        # Obtener usuario
+        user = TelegramWebhookManagerService._get_user(chat_id)
+        if not user or user.registration_state != UserRegistrationState.COMPLETED:
+            error_message = "❌ Usuario no registrado. Usa /registrar para comenzar."
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+            return
+        
+        # Responder al callback query para quitar el "loading" del botón
+        await TelegramWebhookManagerService._answer_callback_query(callback_query.get("id"))
+        
+        # Manejar diferentes callbacks
+        if callback_data == "my_profile":
+            TelegramWebhookManagerService._show_user_profile(chat_id, user)
+        elif callback_data == "edit_profile":
+            TelegramWebhookManagerService._show_edit_options(chat_id, user)
+        elif callback_data == "edit_name":
+            user.registration_state = UserRegistrationState.EDITING_NAME
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            message = (
+                f"✏️ <b>Editando tu nombre</b>\n\n"
+                f"📝 <b>Nombre actual:</b> {user.name}\n\n"
+                f"Por favor, escribe tu nuevo nombre:"
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        elif callback_data == "edit_age":
+            user.registration_state = UserRegistrationState.EDITING_AGE
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            message = (
+                f"🎂 <b>Editando tu edad</b>\n\n"
+                f"🎂 <b>Edad actual:</b> {user.age} años\n\n"
+                f"Por favor, escribe tu nueva edad (solo números):"
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        elif callback_data == "back_to_menu":
+            greeting_message = (
+                f"¡Hola {user.name}! 👋\n\n"
+                "<b>¿Qué deseas hacer hoy?</b>"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+        elif callback_data in ["register_routine", "edit_routine", "view_routine"]:
+            # Funcionalidades futuras
+            future_message = (
+                f"🚧 <b>Funcionalidad en desarrollo</b>\n\n"
+                f"La opción <i>'{callback_data.replace('_', ' ').title()}'</i> estará disponible pronto.\n\n"
+                f"¡Gracias por tu paciencia! 😊"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, future_message, keyboard)
+        else:
+            logger.warning(f"Callback no reconocido: {callback_data}")
+    
+    @staticmethod
+    async def _answer_callback_query(callback_query_id: str, text: str = ""):
+        """Responde a un callback query para quitar el loading del botón"""
+        TG_API = f"https://api.telegram.org/bot{settings.BOT_MANAGER_TOKEN}"
+        payload = {
+            "callback_query_id": callback_query_id,
+            "text": text
+        }
+        
+        r = requests.post(f"{TG_API}/answerCallbackQuery", json=payload, timeout=5)
+        if not r.json().get("ok"):
+            logger.warning(f"Error respondiendo callback query: {r.text}")
