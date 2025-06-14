@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏋️ Rutina Completa - FitBot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .header p {
+            color: var(--tg-theme-hint-color, #999999);
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #0088cc);
+            box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .ejercicios-container {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .ejercicios-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .ejercicios-header h3 {
+            color: var(--tg-theme-text-color, #000000);
+            font-size: 18px;
+        }
+
+        .btn-add {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-add:hover {
+            opacity: 0.8;
+        }
+
+        .ejercicio-item {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .ejercicio-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .ejercicio-number {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .ejercicio-row {
+            display: grid;
+            grid-template-columns: 1fr 80px 80px;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .ejercicio-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            margin-top: 24px;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.8;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 480px) {
+            .ejercicio-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .ejercicio-row input[type="number"] {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏋️ Rutina Completa</h1>
+            <p>Crea tu rutina de ejercicios personalizada</p>
+        </div>
+
+        <div id="messages"></div>
+
+        <form id="rutinaForm">
+            <div class="form-group">
+                <label for="nombre">📝 Nombre de la Rutina</label>
+                <input type="text" id="nombre" class="form-control" placeholder="Ej: Rutina de Pecho y Tríceps" required>
+            </div>
+
+            <div class="form-group">
+                <label for="objetivo">🎯 Objetivo</label>
+                <select id="objetivo" class="form-control" required>
+                    <option value="">Selecciona un objetivo</option>
+                    <option value="fuerza">💪 Fuerza</option>
+                    <option value="hipertrofia">🏋️ Hipertrofia</option>
+                    <option value="resistencia">🏃 Resistencia</option>
+                    <option value="perdida_peso">⚖️ Pérdida de Peso</option>
+                    <option value="tonificacion">✨ Tonificación</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="duracion">⏱️ Duración Estimada</label>
+                <select id="duracion" class="form-control" required>
+                    <option value="">Selecciona duración</option>
+                    <option value="30min">30 minutos</option>
+                    <option value="45min">45 minutos</option>
+                    <option value="60min">1 hora</option>
+                    <option value="90min">1.5 horas</option>
+                    <option value="120min">2 horas</option>
+                </select>
+            </div>
+
+            <div class="ejercicios-container">
+                <div class="ejercicios-header">
+                    <h3>💪 Ejercicios</h3>
+                    <button type="button" class="btn-add" onclick="agregarEjercicio()">+ Agregar</button>
+                </div>
+                <div id="ejerciciosContainer">
+                    <!-- Los ejercicios se agregan dinámicamente aquí -->
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                🚀 Crear Rutina
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Inicializar Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Configurar tema
+        document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
+        document.body.style.color = tg.themeParams.text_color || '#000000';
+
+        let ejercicioCounter = 0;
+
+        function mostrarMensaje(mensaje, tipo = 'success') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = tipo === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = mensaje;
+            messagesDiv.innerHTML = '';
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function agregarEjercicio() {
+            ejercicioCounter++;
+            const container = document.getElementById('ejerciciosContainer');
+            
+            const ejercicioDiv = document.createElement('div');
+            ejercicioDiv.className = 'ejercicio-item';
+            ejercicioDiv.id = `ejercicio-${ejercicioCounter}`;
+            
+            ejercicioDiv.innerHTML = `
+                <button type="button" class="btn-remove" onclick="eliminarEjercicio(${ejercicioCounter})">✕</button>
+                <div class="ejercicio-header">
+                    <div class="ejercicio-number">${ejercicioCounter}</div>
+                    <h4 style="color: var(--tg-theme-text-color, #000000);">Ejercicio ${ejercicioCounter}</h4>
+                </div>
+                <div class="ejercicio-row">
+                    <input type="text" placeholder="Nombre del ejercicio" class="form-control" name="ejercicio-nombre-${ejercicioCounter}" required>
+                    <input type="number" placeholder="Series" class="form-control" name="ejercicio-series-${ejercicioCounter}" min="1" max="10" required>
+                    <input type="number" placeholder="Reps" class="form-control" name="ejercicio-reps-${ejercicioCounter}" min="1" max="100" required>
+                </div>
+                <div style="margin-top: 8px;">
+                    <input type="text" placeholder="Peso (opcional)" class="form-control" name="ejercicio-peso-${ejercicioCounter}" style="font-size: 14px;">
+                </div>
+            `;
+            
+            container.appendChild(ejercicioDiv);
+            
+            // Scroll al nuevo ejercicio
+            ejercicioDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function eliminarEjercicio(id) {
+            const ejercicio = document.getElementById(`ejercicio-${id}`);
+            if (ejercicio) {
+                ejercicio.remove();
+                actualizarNumeracion();
+            }
+        }
+
+        function actualizarNumeracion() {
+            const ejercicios = document.querySelectorAll('.ejercicio-item');
+            ejercicios.forEach((ejercicio, index) => {
+                const numero = ejercicio.querySelector('.ejercicio-number');
+                const titulo = ejercicio.querySelector('h4');
+                if (numero && titulo) {
+                    numero.textContent = index + 1;
+                    titulo.textContent = `Ejercicio ${index + 1}`;
+                }
+            });
+        }
+
+        // Agregar primer ejercicio automáticamente
+        agregarEjercicio();
+
+        // Manejar envío del formulario
+        document.getElementById('rutinaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Creando rutina...';
+            
+            try {
+                // Recopilar datos del formulario
+                const formData = new FormData(this);
+                const nombre = document.getElementById('nombre').value;
+                const objetivo = document.getElementById('objetivo').value;
+                const duracion = document.getElementById('duracion').value;
+                
+                // Recopilar ejercicios
+                const ejercicios = [];
+                const ejerciciosElements = document.querySelectorAll('.ejercicio-item');
+                
+                ejerciciosElements.forEach((ejercicioEl, index) => {
+                    const inputs = ejercicioEl.querySelectorAll('input');
+                    const ejercicio = {
+                        nombre: inputs[0].value,
+                        series: parseInt(inputs[1].value),
+                        repeticiones: parseInt(inputs[2].value),
+                        peso: inputs[3].value || null
+                    };
+                    ejercicios.push(ejercicio);
+                });
+                
+                if (ejercicios.length === 0) {
+                    throw new Error('Debes agregar al menos un ejercicio');
+                }
+                
+                // Preparar datos para enviar
+                const rutinaData = {
+                    type: 'rutina_completa',
+                    rutina: {
+                        nombre: nombre,
+                        objetivo: objetivo,
+                        duracion: duracion,
+                        ejercicios: ejercicios,
+                        fecha_creacion: new Date().toISOString()
+                    }
+                };
+                
+                // Enviar datos a Telegram
+                tg.sendData(JSON.stringify(rutinaData));
+                
+                mostrarMensaje('✅ ¡Rutina creada exitosamente!', 'success');
+                
+                // Cerrar la webapp después de un breve delay
+                setTimeout(() => {
+                    tg.close();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarMensaje('❌ Error: ' + error.message, 'error');
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Crear Rutina';
+            }
+        });
+
+        // Configurar botón principal de Telegram
+        tg.MainButton.text = "🚀 Crear Rutina";
+        tg.MainButton.show();
+        
+        tg.MainButton.onClick(function() {
+            document.getElementById('rutinaForm').dispatchEvent(new Event('submit'));
+        });
+
+        // Validación en tiempo real
+        document.getElementById('rutinaForm').addEventListener('input', function() {
+            const nombre = document.getElementById('nombre').value;
+            const objetivo = document.getElementById('objetivo').value;
+            const duracion = document.getElementById('duracion').value;
+            const ejercicios = document.querySelectorAll('.ejercicio-item');
+            
+            let isValid = nombre && objetivo && duracion && ejercicios.length > 0;
+            
+            // Validar que todos los ejercicios tengan datos completos
+            if (isValid) {
+                ejercicios.forEach(ejercicio => {
+                    const inputs = ejercicio.querySelectorAll('input[required]');
+                    inputs.forEach(input => {
+                        if (!input.value) {
+                            isValid = false;
+                        }
+                    });
+                });
+            }
+            
+            if (isValid) {
+                tg.MainButton.enable();
+                document.getElementById('submitBtn').disabled = false;
+            } else {
+                tg.MainButton.disable();
+                document.getElementById('submitBtn').disabled = true;
+            }
+        });
+
+        // Configurar botón de retroceso
+        tg.BackButton.show();
+        tg.BackButton.onClick(function() {
+            tg.close();
+        });
+
+        console.log('🏋️ Rutina Completa Mini App cargada correctamente');
+    </script>
+</body>
+</html> 

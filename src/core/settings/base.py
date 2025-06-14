@@ -79,3 +79,9 @@ class Settings(BaseSettings):
 
     BOT_MANAGER_TOKEN: str
     BOT_MANAGER_SECRET: str
+    
+    # Mini Apps (Telegram Web Apps)
+    # ----------------------------------------------------------------
+    
+    WEBAPP_BASE_URL: str = "http://localhost:8000"  # Para desarrollo local
+    # WEBAPP_BASE_URL: str = "https://tu-dominio.com"  # Para producción

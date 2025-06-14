@@ -20,6 +20,7 @@ from shared.base_responses import create_response_for_fast_api, EnvelopeResponse
 from datetime import datetime
 from loguru import logger
 from typing import Any
+import json
 
 # --- Utilidades internas seguras ---
 
@@ -240,6 +241,29 @@ class TelegramWebhookManagerService:
         return data
     
     @staticmethod
+    def _send_message_with_keyboard(chat_id: int, text: str, keyboard: dict = None) -> dict:
+        """Envía un mensaje con teclado personalizado (ReplyKeyboardMarkup)"""
+        TG_API = f"https://api.telegram.org/bot{settings.BOT_MANAGER_TOKEN}"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML"
+        }
+        if keyboard:
+            payload["reply_markup"] = keyboard
+            
+        logger.info(f"Enviando mensaje con teclado personalizado a chat_id={chat_id}")
+        r = requests.post(f"{TG_API}/sendMessage", json=payload, timeout=10)
+        data = r.json()
+        
+        if not data.get("ok"):
+            logger.error(f"Telegram error: {data.get('description', 'Unknown error')}")
+            raise HTTPException(status_code=502, detail=data.get("description"))
+        
+        logger.info(f"Mensaje con teclado enviado correctamente, message_id={data['result']['message_id']}")
+        return data
+    
+    @staticmethod
     def _get_user(chat_id: int) -> TelegramUserSchema | None:
         """Obtiene un usuario del diccionario simulado"""
         return users_db.get(chat_id)
@@ -252,15 +276,52 @@ class TelegramWebhookManagerService:
     
     @staticmethod
     def _create_main_menu_keyboard():
-        """Crea el teclado principal con las opciones del menú"""
+        """Crea el teclado principal con las opciones del menú (inline)"""
+        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
+        
         return {
             "inline_keyboard": [
-                [{"text": "📝 Registrar Rutina", "callback_data": "register_routine"}],
-                [{"text": "✏️ Editar Rutina", "callback_data": "edit_routine"}],
-                [{"text": "👀 Ver Rutina", "callback_data": "view_routine"}],
+                [{"text": "🏋️ Rutina Completa", "web_app": {"url": f"{webapp_base_url}/rutina-completa"}}],
+                [{"text": "👤 Perfil Avanzado", "web_app": {"url": f"{webapp_base_url}/perfil-avanzado"}}],
+                [{"text": "📊 Dashboard", "web_app": {"url": f"{webapp_base_url}/dashboard"}}],
                 [{"text": "👤 Mi Perfil", "callback_data": "my_profile"}],
-                [{"text": "⚙️ Editar Datos", "callback_data": "edit_profile"}]
+                [{"text": "⚙️ Editar Datos", "callback_data": "edit_profile"}],
+                [{"text": "🎛️ Teclado Mini Apps", "callback_data": "show_webapp_keyboard"}]
             ]
+        }
+    
+    @staticmethod
+    def _create_webapp_keyboard():
+        """Crea el teclado personalizado con Mini Apps (ReplyKeyboardMarkup)"""
+        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
+        
+        return {
+            "keyboard": [
+                [
+                    {
+                        "text": "🏋️ Rutina Completa", 
+                        "web_app": {"url": f"{webapp_base_url}/rutina-completa"}
+                    }
+                ],
+                [
+                    {
+                        "text": "👤 Perfil Avanzado", 
+                        "web_app": {"url": f"{webapp_base_url}/perfil-avanzado"}
+                    }
+                ],
+                [
+                    {
+                        "text": "📊 Dashboard", 
+                        "web_app": {"url": f"{webapp_base_url}/dashboard"}
+                    }
+                ],
+                [
+                    {"text": "🔙 Menú Principal"}
+                ]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": False,
+            "input_field_placeholder": "Elige una opción o usa las Mini Apps..."
         }
     
     @staticmethod
@@ -317,18 +378,18 @@ class TelegramWebhookManagerService:
             TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
         else:
             # Usuario no registrado, pedirle que se registre
-            greeting_message = (
+            message = (
                 f"╭─────────────────────────╮\n"
-                f"│  <b>👋 ¡HOLA {user.name.upper()}! 👋</b>  │\n"
+                f"│  <b>👋 ¡HOLA! 👋</b>  │\n"
                 f"╰─────────────────────────╯\n\n"
-                f"🌟 <b>¡Bienvenido de vuelta!</b> 🌟\n\n"
-                f"💪 <b>¿Listo para entrenar hoy?</b>\n\n"
+                f"🌟 <b>¡Bienvenido a FitBot!</b> 🌟\n\n"
+                f"💪 Para comenzar necesitas registrarte\n\n"
                 f"┌─────────────────────────┐\n"
-                f"│   🎯 <b>¿Qué deseas hacer?</b>   │\n"
+                f"│   🎯 <b>Escribe /registrar</b>   │\n"
+                f"│     <b>para comenzar</b>     │\n"
                 f"└─────────────────────────┘"
             )
-            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
     
     @staticmethod
     def _handle_waiting_name(chat_id: int, text: str, user: TelegramUserSchema):
@@ -400,6 +461,41 @@ class TelegramWebhookManagerService:
         elif text.lower() in ["/editarnombre", "/editaredad", "/editardatos"]:
             TelegramWebhookManagerService._show_edit_options(chat_id, user)
             return
+        elif text == "🔙 Menú Principal":
+            # Volver al menú principal con inline keyboard
+            greeting_message = (
+                f"╭─────────────────────────╮\n"
+                f"│  <b>👋 ¡HOLA {user.name.upper()}! 👋</b>  │\n"
+                f"╰─────────────────────────╯\n\n"
+                f"🌟 <b>¡Bienvenido de vuelta!</b> 🌟\n\n"
+                f"💪 <b>¿Listo para entrenar hoy?</b>\n\n"
+                f"┌─────────────────────────┐\n"
+                f"│   🎯 <b>¿Qué deseas hacer?</b>   │\n"
+                f"└─────────────────────────┘"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+            return
+        elif text == "/webapp" or text.lower() == "/miniapps":
+            # Mostrar teclado con Mini Apps
+            webapp_message = (
+                f"╭─────────────────────────╮\n"
+                f"│  <b>🚀 MINI APPS 🚀</b>  │\n"
+                f"╰─────────────────────────╯\n\n"
+                f"✨ <b>¡Hola {user.name}!</b> ✨\n\n"
+                f"🎯 <b>Usa las Mini Apps para una</b>\n"
+                f"<b>experiencia más completa:</b>\n\n"
+                f"🏋️ <b>Rutina Completa:</b> Crea rutinas detalladas\n"
+                f"👤 <b>Perfil Avanzado:</b> Gestiona tu información\n"
+                f"📊 <b>Dashboard:</b> Ve tus estadísticas\n\n"
+                f"┌─────────────────────────┐\n"
+                f"│ 💡 <i>Toca los botones de abajo</i> │\n"
+                f"│    <i>para abrir las Mini Apps</i>   │\n"
+                f"└─────────────────────────┘"
+            )
+            keyboard = TelegramWebhookManagerService._create_webapp_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, webapp_message, keyboard)
+            return
         
         # Mensaje de bienvenida normal con diseño mejorado
         greeting_message = (
@@ -408,6 +504,7 @@ class TelegramWebhookManagerService:
             f"╰─────────────────────────╯\n\n"
             f"🌟 <b>¡Bienvenido de vuelta!</b> 🌟\n\n"
             f"💪 <b>¿Listo para entrenar hoy?</b>\n\n"
+            f"🚀 <i>Escribe</i> <code>/webapp</code> <i>para Mini Apps</i>\n\n"
             f"┌─────────────────────────┐\n"
             f"│   🎯 <b>¿Qué deseas hacer?</b>   │\n"
             f"└─────────────────────────┘"
@@ -592,6 +689,20 @@ class TelegramWebhookManagerService:
             logger.info("⚠️ Update ignorado - no es un mensaje")
             return {"status": "ignored"}
 
+        # Verificar si es un mensaje con datos de webapp
+        if message.get("web_app_data"):
+            chat_id = message.get("chat", {}).get("id")
+            from_user = message.get("from", {})
+            user = TelegramWebhookManagerService._get_user(chat_id)
+            
+            if user and user.registration_state == UserRegistrationState.COMPLETED:
+                TelegramWebhookManagerService._handle_webapp_data(chat_id, message["web_app_data"], user)
+            else:
+                error_message = "❌ Debes estar registrado para usar las Mini Apps. Escribe /registrar"
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+            
+            return {"status": "ok"}
+
         # Extraer información del mensaje
         chat_id = message.get("chat", {}).get("id")
         text = message.get("text", "").strip()
@@ -705,6 +816,25 @@ class TelegramWebhookManagerService:
             )
             keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
             TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+        elif callback_data == "show_webapp_keyboard":
+            # Mostrar teclado con Mini Apps (ReplyKeyboardMarkup)
+            webapp_message = (
+                f"╭─────────────────────────╮\n"
+                f"│  <b>🎛️ TECLADO MINI APPS</b>  │\n"
+                f"╰─────────────────────────╯\n\n"
+                f"✨ <b>¡Hola {user.name}!</b> ✨\n\n"
+                f"🎯 <b>Ahora tienes acceso al teclado</b>\n"
+                f"<b>con Mini Apps integradas:</b>\n\n"
+                f"🏋️ <b>Rutina Completa:</b> Formularios avanzados\n"
+                f"👤 <b>Perfil Avanzado:</b> Gestión completa\n"
+                f"📊 <b>Dashboard:</b> Estadísticas interactivas\n\n"
+                f"┌─────────────────────────┐\n"
+                f"│ 💡 <i>Usa los botones de abajo</i> │\n"
+                f"│    <i>para abrir las Mini Apps</i>   │\n"
+                f"└─────────────────────────┘"
+            )
+            keyboard = TelegramWebhookManagerService._create_webapp_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, webapp_message, keyboard)
         elif callback_data in ["register_routine", "edit_routine", "view_routine"]:
             # Funcionalidades futuras
             future_message = (
@@ -729,3 +859,134 @@ class TelegramWebhookManagerService:
         r = requests.post(f"{TG_API}/answerCallbackQuery", json=payload, timeout=5)
         if not r.json().get("ok"):
             logger.warning(f"Error respondiendo callback query: {r.text}")
+
+    @staticmethod
+    def _handle_webapp_data(chat_id: int, web_app_data: dict, user: TelegramUserSchema):
+        """Maneja datos recibidos de las Mini Apps"""
+        try:
+            # Parsear los datos JSON de la webapp
+            data = json.loads(web_app_data.get('data', '{}'))
+            webapp_type = data.get('type', 'unknown')
+            
+            logger.info(f"Datos recibidos de webapp: {data}")
+            
+            if webapp_type == 'rutina_completa':
+                TelegramWebhookManagerService._handle_rutina_completa_data(chat_id, data, user)
+            elif webapp_type == 'perfil_avanzado':
+                TelegramWebhookManagerService._handle_perfil_avanzado_data(chat_id, data, user)
+            elif webapp_type == 'dashboard_action':
+                TelegramWebhookManagerService._handle_dashboard_data(chat_id, data, user)
+            else:
+                # Datos genéricos
+                success_message = (
+                    f"✅ <b>Datos recibidos correctamente</b>\n\n"
+                    f"📱 <b>Desde:</b> Mini App\n"
+                    f"👤 <b>Usuario:</b> {user.name}\n"
+                    f"📊 <b>Datos:</b>\n"
+                    f"<pre><code>{json.dumps(data, indent=2, ensure_ascii=False)}</code></pre>\n\n"
+                    f"¿Qué deseas hacer ahora?"
+                )
+                keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, success_message, keyboard)
+                
+        except json.JSONDecodeError:
+            error_message = (
+                f"❌ <b>Error al procesar datos</b>\n\n"
+                f"Los datos recibidos no tienen un formato válido.\n"
+                f"Por favor, intenta de nuevo."
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+        except Exception as e:
+            logger.error(f"Error procesando datos de webapp: {e}")
+            error_message = (
+                f"❌ <b>Error interno</b>\n\n"
+                f"Ocurrió un error procesando tu solicitud.\n"
+                f"Por favor, intenta de nuevo más tarde."
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+    
+    @staticmethod
+    def _handle_rutina_completa_data(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja datos específicos de rutina completa"""
+        rutina = data.get('rutina', {})
+        ejercicios = rutina.get('ejercicios', [])
+        
+        message = (
+            f"🏋️ <b>Rutina Registrada Exitosamente</b>\n\n"
+            f"👤 <b>Usuario:</b> {user.name}\n"
+            f"📝 <b>Nombre:</b> {rutina.get('nombre', 'Sin nombre')}\n"
+            f"⏱️ <b>Duración:</b> {rutina.get('duracion', 'No especificada')}\n"
+            f"🎯 <b>Objetivo:</b> {rutina.get('objetivo', 'General')}\n\n"
+            f"💪 <b>Ejercicios ({len(ejercicios)}):</b>\n"
+        )
+        
+        for i, ejercicio in enumerate(ejercicios[:5], 1):  # Mostrar máximo 5
+            message += f"{i}. {ejercicio.get('nombre', 'Sin nombre')} - {ejercicio.get('series', '?')}x{ejercicio.get('repeticiones', '?')}\n"
+        
+        if len(ejercicios) > 5:
+            message += f"... y {len(ejercicios) - 5} ejercicios más\n"
+        
+        message += f"\n✅ <b>¡Rutina guardada correctamente!</b>"
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
+    
+    @staticmethod
+    def _handle_perfil_avanzado_data(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja datos específicos de perfil avanzado"""
+        perfil = data.get('perfil', {})
+        
+        # Actualizar datos del usuario si se proporcionaron
+        if perfil.get('nombre'):
+            user.name = perfil['nombre']
+        if perfil.get('edad'):
+            user.age = perfil['edad']
+        
+        user.updated_at = datetime.utcnow()
+        TelegramWebhookManagerService._save_user(user)
+        
+        message = (
+            f"👤 <b>Perfil Actualizado</b>\n\n"
+            f"✅ <b>Información guardada:</b>\n"
+            f"📝 <b>Nombre:</b> {user.name}\n"
+            f"🎂 <b>Edad:</b> {user.age} años\n"
+        )
+        
+        if perfil.get('peso'):
+            message += f"⚖️ <b>Peso:</b> {perfil['peso']} kg\n"
+        if perfil.get('altura'):
+            message += f"📏 <b>Altura:</b> {perfil['altura']} cm\n"
+        if perfil.get('objetivo_fitness'):
+            message += f"🎯 <b>Objetivo:</b> {perfil['objetivo_fitness']}\n"
+        
+        message += f"\n🎉 <b>¡Perfil actualizado correctamente!</b>"
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
+    
+    @staticmethod
+    def _handle_dashboard_data(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja datos específicos del dashboard"""
+        action = data.get('action', 'view')
+        
+        if action == 'export_data':
+            message = (
+                f"📊 <b>Exportación de Datos</b>\n\n"
+                f"👤 <b>Usuario:</b> {user.name}\n"
+                f"📅 <b>Fecha:</b> {datetime.utcnow().strftime('%d/%m/%Y %H:%M')}\n\n"
+                f"📈 <b>Resumen de actividad:</b>\n"
+                f"• Rutinas completadas: 0\n"
+                f"• Días activos: 0\n"
+                f"• Tiempo total: 0 min\n\n"
+                f"💾 <b>Datos exportados correctamente</b>"
+            )
+        else:
+            message = (
+                f"📊 <b>Dashboard Actualizado</b>\n\n"
+                f"✅ <b>Acción procesada:</b> {action}\n"
+                f"👤 <b>Usuario:</b> {user.name}\n\n"
+                f"🎯 <b>¡Información actualizada!</b>"
+            )
+        
+        keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)

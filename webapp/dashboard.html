@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard - FitBot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 24px;
+            background: linear-gradient(135deg, var(--tg-theme-button-color, #0088cc), #0066aa);
+            border-radius: 20px;
+            color: var(--tg-theme-button-text-color, #ffffff);
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.3);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.2);
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #0088cc);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-section {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+        }
+
+        .progress-section h2 {
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 16px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-item {
+            margin-bottom: 16px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-label {
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .progress-value {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--tg-theme-button-color, #0088cc), #0066aa);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .action-card {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .action-card:hover {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.3);
+        }
+
+        .action-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .action-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .action-description {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .recent-activity {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+        }
+
+        .recent-activity h2 {
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 16px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--tg-theme-button-color, #0088cc);
+        }
+
+        .activity-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border-radius: 50%;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 2px;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #c3e6cb;
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #f5c6cb;
+            font-weight: 500;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 136, 204, 0.5);
+        }
+
+        @media (max-width: 480px) {
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .floating-action {
+                bottom: 16px;
+                right: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dashboard</h1>
+            <p>Tu progreso fitness en tiempo real</p>
+        </div>
+
+        <div id="messages"></div>
+
+        <!-- Estadísticas Generales -->
+        <div class="stats-overview">
+            <div class="stat-card" onclick="mostrarDetalle('rutinas')">
+                <div class="stat-icon">🏋️</div>
+                <div class="stat-value" id="totalRutinas">12</div>
+                <div class="stat-label">Rutinas</div>
+            </div>
+            <div class="stat-card" onclick="mostrarDetalle('dias')">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value" id="diasActivos">28</div>
+                <div class="stat-label">Días Activos</div>
+            </div>
+            <div class="stat-card" onclick="mostrarDetalle('tiempo')">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-value" id="tiempoTotal">45</div>
+                <div class="stat-label">Horas</div>
+            </div>
+            <div class="stat-card" onclick="mostrarDetalle('calorias')">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-value" id="caloriasQuemadas">2.1k</div>
+                <div class="stat-label">Calorías</div>
+            </div>
+        </div>
+
+        <!-- Progreso Semanal -->
+        <div class="progress-section">
+            <h2>📈 Progreso Semanal</h2>
+            
+            <div class="progress-item">
+                <div class="progress-header">
+                    <span class="progress-label">Meta de Entrenamientos</span>
+                    <span class="progress-value">4/5</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 80%"></div>
+                </div>
+            </div>
+            
+            <div class="progress-item">
+                <div class="progress-header">
+                    <span class="progress-label">Tiempo de Ejercicio</span>
+                    <span class="progress-value">6.5/8 horas</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 81%"></div>
+                </div>
+            </div>
+            
+            <div class="progress-item">
+                <div class="progress-header">
+                    <span class="progress-label">Calorías Objetivo</span>
+                    <span class="progress-value">1,850/2,000</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 92%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="actions-grid">
+            <div class="action-card" onclick="ejecutarAccion('nueva_rutina')">
+                <div class="action-icon">➕</div>
+                <div class="action-title">Nueva Rutina</div>
+                <div class="action-description">Crear rutina personalizada</div>
+            </div>
+            
+            <div class="action-card" onclick="ejecutarAccion('registro_peso')">
+                <div class="action-icon">⚖️</div>
+                <div class="action-title">Registrar Peso</div>
+                <div class="action-description">Actualizar progreso</div>
+            </div>
+            
+            <div class="action-card" onclick="ejecutarAccion('ver_estadisticas')">
+                <div class="action-icon">📊</div>
+                <div class="action-title">Estadísticas</div>
+                <div class="action-description">Análisis detallado</div>
+            </div>
+            
+            <div class="action-card" onclick="ejecutarAccion('exportar_datos')">
+                <div class="action-icon">📤</div>
+                <div class="action-title">Exportar</div>
+                <div class="action-description">Descargar datos</div>
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="recent-activity">
+            <h2>🕒 Actividad Reciente</h2>
+            
+            <div class="activity-item">
+                <div class="activity-icon">🏋️</div>
+                <div class="activity-content">
+                    <div class="activity-title">Rutina de Pecho completada</div>
+                    <div class="activity-time">Hace 2 horas</div>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon">⚖️</div>
+                <div class="activity-content">
+                    <div class="activity-title">Peso registrado: 72.5 kg</div>
+                    <div class="activity-time">Ayer</div>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon">🎯</div>
+                <div class="activity-content">
+                    <div class="activity-title">Meta semanal alcanzada</div>
+                    <div class="activity-time">Hace 3 días</div>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon">📝</div>
+                <div class="activity-content">
+                    <div class="activity-title">Perfil actualizado</div>
+                    <div class="activity-time">Hace 1 semana</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón flotante para acciones rápidas -->
+    <button class="floating-action" onclick="mostrarMenuRapido()" title="Acciones rápidas">
+        ⚡
+    </button>
+
+    <script>
+        // Inicializar Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Configurar tema
+        document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
+
+        function mostrarMensaje(mensaje, tipo = 'success') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = tipo === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = mensaje;
+            messagesDiv.innerHTML = '';
+            messagesDiv.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        function mostrarDetalle(tipo) {
+            let mensaje = '';
+            switch(tipo) {
+                case 'rutinas':
+                    mensaje = '🏋️ Has completado 12 rutinas este mes. ¡Excelente progreso!';
+                    break;
+                case 'dias':
+                    mensaje = '📅 Llevas 28 días consecutivos entrenando. ¡Increíble constancia!';
+                    break;
+                case 'tiempo':
+                    mensaje = '⏱️ Has entrenado 45 horas en total. ¡Sigue así!';
+                    break;
+                case 'calorias':
+                    mensaje = '🔥 Has quemado 2,100 calorías esta semana. ¡Fantástico!';
+                    break;
+            }
+            mostrarMensaje(mensaje, 'success');
+        }
+
+        function ejecutarAccion(accion) {
+            try {
+                let dashboardData = {
+                    type: 'dashboard_action',
+                    action: accion,
+                    timestamp: new Date().toISOString()
+                };
+
+                switch(accion) {
+                    case 'nueva_rutina':
+                        mostrarMensaje('🏋️ Abriendo creador de rutinas...', 'success');
+                        dashboardData.details = { redirect: 'rutina-completa' };
+                        break;
+                        
+                    case 'registro_peso':
+                        const peso = prompt('⚖️ Ingresa tu peso actual (kg):');
+                        if (peso && !isNaN(peso)) {
+                            mostrarMensaje(`✅ Peso registrado: ${peso} kg`, 'success');
+                            dashboardData.details = { peso: parseFloat(peso) };
+                        } else {
+                            return;
+                        }
+                        break;
+                        
+                    case 'ver_estadisticas':
+                        mostrarMensaje('📊 Generando reporte de estadísticas...', 'success');
+                        dashboardData.details = { 
+                            rutinas: 12, 
+                            dias_activos: 28, 
+                            tiempo_total: 45, 
+                            calorias: 2100 
+                        };
+                        break;
+                        
+                    case 'exportar_datos':
+                        mostrarMensaje('📤 Preparando exportación de datos...', 'success');
+                        dashboardData.details = { formato: 'json', incluir_historial: true };
+                        break;
+                        
+                    default:
+                        mostrarMensaje('🚧 Función en desarrollo', 'error');
+                        return;
+                }
+
+                // Enviar datos a Telegram
+                tg.sendData(JSON.stringify(dashboardData));
+                
+                // Cerrar después de un breve delay para acciones que lo requieran
+                if (['exportar_datos', 'ver_estadisticas'].includes(accion)) {
+                    setTimeout(() => {
+                        tg.close();
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarMensaje('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        function mostrarMenuRapido() {
+            const acciones = [
+                '🏋️ Nueva Rutina',
+                '⚖️ Registrar Peso', 
+                '📊 Ver Estadísticas',
+                '📤 Exportar Datos'
+            ];
+            
+            const seleccion = prompt('⚡ Acciones Rápidas:\n\n' + 
+                acciones.map((accion, i) => `${i + 1}. ${accion}`).join('\n') + 
+                '\n\nElige una opción (1-4):');
+            
+            if (seleccion && seleccion >= 1 && seleccion <= 4) {
+                const accionesMap = ['nueva_rutina', 'registro_peso', 'ver_estadisticas', 'exportar_datos'];
+                ejecutarAccion(accionesMap[seleccion - 1]);
+            }
+        }
+
+        // Actualizar estadísticas dinámicamente (simulación)
+        function actualizarEstadisticas() {
+            const stats = {
+                rutinas: Math.floor(Math.random() * 5) + 10,
+                dias: Math.floor(Math.random() * 10) + 25,
+                tiempo: Math.floor(Math.random() * 20) + 35,
+                calorias: (Math.random() * 1000 + 1500).toFixed(1)
+            };
+            
+            document.getElementById('totalRutinas').textContent = stats.rutinas;
+            document.getElementById('diasActivos').textContent = stats.dias;
+            document.getElementById('tiempoTotal').textContent = stats.tiempo;
+            document.getElementById('caloriasQuemadas').textContent = stats.calorias + 'k';
+        }
+
+        // Configurar botón principal de Telegram
+        tg.MainButton.text = "📊 Actualizar Dashboard";
+        tg.MainButton.show();
+        
+        tg.MainButton.onClick(function() {
+            actualizarEstadisticas();
+            mostrarMensaje('✅ Dashboard actualizado correctamente', 'success');
+        });
+
+        // Configurar botón de retroceso
+        tg.BackButton.show();
+        tg.BackButton.onClick(function() {
+            tg.close();
+        });
+
+        // Actualizar estadísticas cada 30 segundos
+        setInterval(actualizarEstadisticas, 30000);
+
+        console.log('📊 Dashboard Mini App cargada correctamente');
+    </script>
+</body>
+</html> 
