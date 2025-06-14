@@ -11,6 +11,7 @@ class UserRegistrationState(str, Enum):
     COMPLETED = "completed"
     EDITING_NAME = "editing_name"
     EDITING_AGE = "editing_age"
+    CONFIRMING_DELETE = "confirming_delete"
 
 # ---------- Usuario Schema ----------
 class TelegramUserSchema(BaseModel):
