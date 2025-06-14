@@ -288,7 +288,7 @@ class TelegramWebhookManagerService:
     @staticmethod
     def _create_webapp_keyboard():
         """Crea el teclado personalizado con Mini Apps (ReplyKeyboardMarkup)"""
-        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
+        webapp_base_url = settings.WEBAPP_BASE_URL
         
         return {
             "keyboard": [
@@ -344,7 +344,7 @@ class TelegramWebhookManagerService:
     @staticmethod
     def _create_registration_keyboard():
         """Crea el teclado para registro con Mini Web App"""
-        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
+        webapp_base_url = settings.WEBAPP_BASE_URL
         return {
             "inline_keyboard": [
                 [
@@ -488,7 +488,7 @@ class TelegramWebhookManagerService:
     @staticmethod
     def _show_settings(chat_id: int, user: TelegramUserSchema):
         """Muestra la webapp de settings"""
-        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'http://localhost:8001')
+        webapp_base_url = settings.WEBAPP_BASE_URL
         
         message = (
             f"⚙️ <b>Settings</b>\n\n"
@@ -664,12 +664,21 @@ class TelegramWebhookManagerService:
             from_user = message.get("from", {})
             user = TelegramWebhookManagerService._get_user(chat_id)
             
-            if user and user.registration_state == UserRegistrationState.COMPLETED:
-                TelegramWebhookManagerService._handle_webapp_data(chat_id, message["web_app_data"], user)
-            else:
-                error_message = "❌ Debes estar registrado para usar las Mini Apps. Escribe /registrar"
-                TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+            # Si no existe usuario, crearlo para el registro
+            if not user:
+                user = TelegramUserSchema(
+                    chat_id=chat_id,
+                    user_id=from_user.get("id"),
+                    username=from_user.get("username"),
+                    first_name=from_user.get("first_name"),
+                    last_name=from_user.get("last_name"),
+                    registration_state=UserRegistrationState.NOT_REGISTERED,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+                TelegramWebhookManagerService._save_user(user)
             
+            TelegramWebhookManagerService._handle_webapp_data(chat_id, message["web_app_data"], user)
             return {"status": "ok"}
 
         # Extraer información del mensaje
@@ -871,6 +880,8 @@ class TelegramWebhookManagerService:
                 TelegramWebhookManagerService._handle_registration_data(chat_id, data, user)
             elif data.get('action') == 'delete_account':
                 TelegramWebhookManagerService._handle_delete_account(chat_id, data, user)
+            elif data.get('action') == 'update_profile':
+                TelegramWebhookManagerService._handle_profile_update(chat_id, data, user)
             else:
                 # Datos genéricos
                 success_message = (
@@ -1103,3 +1114,53 @@ class TelegramWebhookManagerService:
             )
             keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
             TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
+    
+    @staticmethod
+    def _handle_profile_update(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja la actualización del perfil desde settings webapp"""
+        try:
+            name = data.get('name', '').strip()
+            age = int(data.get('age', 0))
+            
+            # Validar datos
+            if not name or len(name) < 2:
+                error_message = (
+                    f"❌ <b>Error actualizando perfil</b>\n\n"
+                    f"El nombre debe tener al menos 2 caracteres."
+                )
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+                return
+            
+            if age < 13 or age > 120:
+                error_message = (
+                    f"❌ <b>Error actualizando perfil</b>\n\n"
+                    f"La edad debe estar entre 13 y 120 años."
+                )
+                TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)
+                return
+            
+            # Actualizar perfil
+            old_name = user.name
+            old_age = user.age
+            user.name = name
+            user.age = age
+            user.updated_at = datetime.utcnow()
+            TelegramWebhookManagerService._save_user(user)
+            
+            # Mensaje de confirmación
+            success_message = (
+                f"✅ <b>Perfil actualizado</b>\n\n"
+                f"📝 <b>Nombre:</b> {old_name} → {user.name}\n"
+                f"🎂 <b>Edad:</b> {old_age} → {user.age} años\n\n"
+                f"✨ <b>¡Cambios guardados exitosamente!</b>"
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, success_message, keyboard)
+            
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error actualizando perfil: {e}")
+            error_message = (
+                f"❌ <b>Error actualizando perfil</b>\n\n"
+                f"Los datos recibidos no son válidos."
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, error_message)

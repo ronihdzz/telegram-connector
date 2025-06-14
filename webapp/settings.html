@@ -191,6 +191,22 @@
             <p>GymBot - Configuración</p>
         </div>
 
+        <!-- Perfil de Usuario -->
+        <div class="card">
+            <h2>👤 Mi Perfil</h2>
+            <div class="setting-item">
+                <span class="setting-label">Nombre</span>
+                <input type="text" id="nameInput" placeholder="Tu nombre" style="padding: 8px 12px; border: 1px solid var(--tg-theme-button-color, #0088cc); border-radius: 6px; background: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000);">
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">Edad</span>
+                <input type="number" id="ageInput" placeholder="Tu edad" min="13" max="120" style="padding: 8px 12px; border: 1px solid var(--tg-theme-button-color, #0088cc); border-radius: 6px; background: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000);">
+            </div>
+            <button class="btn btn-primary" onclick="updateProfile()">
+                Actualizar Perfil
+            </button>
+        </div>
+
         <!-- Configuración General -->
         <div class="card">
             <h2>🌐 Idioma</h2>
@@ -247,7 +263,51 @@
                 if (saved) {
                     const settings = JSON.parse(saved);
                     document.getElementById('languageSelect').value = settings.language || 'es';
+                    document.getElementById('nameInput').value = settings.name || '';
+                    document.getElementById('ageInput').value = settings.age || '';
                 }
+            }
+        }
+
+        // Actualizar perfil
+        function updateProfile() {
+            const name = document.getElementById('nameInput').value.trim();
+            const age = parseInt(document.getElementById('ageInput').value);
+
+            // Validaciones
+            if (!name || name.length < 2) {
+                showMessage('El nombre debe tener al menos 2 caracteres', 'error');
+                return;
+            }
+
+            if (!age || age < 13 || age > 120) {
+                showMessage('La edad debe estar entre 13 y 120 años', 'error');
+                return;
+            }
+
+            // Guardar en localStorage
+            const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+            if (tgUser) {
+                const settings = JSON.parse(localStorage.getItem('gymbot_settings_' + tgUser.id) || '{}');
+                settings.name = name;
+                settings.age = age;
+                localStorage.setItem('gymbot_settings_' + tgUser.id, JSON.stringify(settings));
+            }
+
+            // Enviar datos al bot
+            const profileData = {
+                action: 'update_profile',
+                name: name,
+                age: age,
+                timestamp: Date.now()
+            };
+
+            try {
+                window.Telegram.WebApp.sendData(JSON.stringify(profileData));
+                showMessage('✅ Perfil actualizado correctamente', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('❌ Error al actualizar perfil. Intenta de nuevo.', 'error');
             }
         }
 
