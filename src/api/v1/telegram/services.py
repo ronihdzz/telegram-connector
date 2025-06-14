@@ -309,7 +309,13 @@ class TelegramWebhookManagerService:
         """Crea el teclado principal simplificado"""
         return {
             "keyboard": [
-                [{"text": "👤 Perfil"}, {"text": "⚙️ Settings"}]
+                [{
+                    "text": "👤 Perfil",
+                    "web_app": {"url": f"{settings.WEBAPP_BASE_URL}/perfil-avanzado"}
+                }, {
+                    "text": "⚙️ Settings",
+                    "web_app": {"url": f"{settings.WEBAPP_BASE_URL}/settings"}
+                }]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": False
