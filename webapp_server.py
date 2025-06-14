@@ -132,43 +132,33 @@ async def root():
 
         <div class="apps-grid">
             <div class="app-card">
-                <div class="app-icon">🏋️</div>
-                <div class="app-title">Rutina Completa</div>
-                <div class="app-description">
-                    Formulario avanzado para crear rutinas de ejercicio con validación en tiempo real
-                    y gestión dinámica de ejercicios.
-                </div>
-                <a href="/rutina-completa" class="app-link">Abrir Mini App</a>
-            </div>
-
-            <div class="app-card">
-                <div class="app-icon">👤</div>
-                <div class="app-title">Perfil Avanzado</div>
-                <div class="app-description">
-                    Gestión completa del perfil de usuario con cálculos automáticos de IMC, TMR
-                    y calorías diarias.
-                </div>
-                <a href="/perfil-avanzado" class="app-link">Abrir Mini App</a>
-            </div>
-
-            <div class="app-card">
                 <div class="app-icon">📝</div>
                 <div class="app-title">Registro de Usuario</div>
                 <div class="app-description">
-                    Formulario elegante y minimalista para registrar nuevos usuarios
-                    con validación en tiempo real y animaciones fluidas.
+                    Formulario minimalista para registrar nuevos usuarios.
+                    Solo requiere nombre y edad.
                 </div>
                 <a href="/registro" class="app-link">Abrir Mini App</a>
             </div>
 
             <div class="app-card">
-                <div class="app-icon">📊</div>
-                <div class="app-title">Dashboard</div>
+                <div class="app-icon">👤</div>
+                <div class="app-title">Perfil</div>
                 <div class="app-description">
-                    Panel interactivo con estadísticas en tiempo real, progreso semanal
-                    y acciones rápidas.
+                    Gestión simplificada del perfil de usuario.
+                    Muestra nombre, edad y chat ID.
                 </div>
-                <a href="/dashboard" class="app-link">Abrir Mini App</a>
+                <a href="/perfil-avanzado" class="app-link">Abrir Mini App</a>
+            </div>
+
+            <div class="app-card">
+                <div class="app-icon">⚙️</div>
+                <div class="app-title">Settings</div>
+                <div class="app-description">
+                    Configuración de cuenta: idioma y eliminar cuenta
+                    con doble confirmación.
+                </div>
+                <a href="/settings" class="app-link">Abrir Mini App</a>
             </div>
         </div>
 
@@ -192,9 +182,8 @@ WEBAPP_BASE_URL: str = "http://localhost:8001"  # Para desarrollo
             <h3>3. URLs de las Mini Apps:</h3>
             <div class="code-block">
 📝 Registro: http://localhost:8001/registro
-🏋️ Rutina Completa: http://localhost:8001/rutina-completa
-👤 Perfil Avanzado: http://localhost:8001/perfil-avanzado  
-📊 Dashboard: http://localhost:8001/dashboard
+👤 Perfil: http://localhost:8001/perfil-avanzado
+⚙️ Settings: http://localhost:8001/settings
             </div>
         </div>
 
@@ -247,6 +236,14 @@ async def dashboard():
         return FileResponse(file_path, media_type="text/html")
     return HTMLResponse("<h1>❌ Mini App no encontrada</h1><p>Archivo dashboard.html no existe</p>", status_code=404)
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings():
+    """Servir Mini App de Settings"""
+    file_path = WEBAPP_DIR / "settings.html"
+    if file_path.exists():
+        return FileResponse(file_path, media_type="text/html")
+    return HTMLResponse("<h1>❌ Mini App no encontrada</h1><p>Archivo settings.html no existe</p>", status_code=404)
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -255,9 +252,8 @@ async def health_check():
         "message": "🚀 Telegram Mini Apps Server is running",
         "available_apps": [
             "registro",
-            "rutina-completa",
             "perfil-avanzado", 
-            "dashboard"
+            "settings"
         ]
     }
 
@@ -267,9 +263,8 @@ if __name__ == "__main__":
     print("🚀 Iniciando servidor de Mini Apps...")
     print("📱 Mini Apps disponibles:")
     print("   📝 http://localhost:8001/registro")
-    print("   🏋️ http://localhost:8001/rutina-completa")
     print("   👤 http://localhost:8001/perfil-avanzado")
-    print("   📊 http://localhost:8001/dashboard")
+    print("   ⚙️ http://localhost:8001/settings")
     print("\n💡 Panel de control: http://localhost:8001")
     print("\n🔧 Para usar en tu bot, configura:")
     print("   WEBAPP_BASE_URL=http://localhost:8001")

@@ -276,18 +276,13 @@ class TelegramWebhookManagerService:
     
     @staticmethod
     def _create_main_menu_keyboard():
-        """Crea el teclado principal con las opciones del menú (inline)"""
-        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'https://your-webapp-domain.com')
-        
+        """Crea el teclado principal simplificado"""
         return {
-            "inline_keyboard": [
-                [{"text": "🏋️ Rutina Completa", "web_app": {"url": f"{webapp_base_url}/rutina-completa"}}],
-                [{"text": "👤 Perfil Avanzado", "web_app": {"url": f"{webapp_base_url}/perfil-avanzado"}}],
-                [{"text": "📊 Dashboard", "web_app": {"url": f"{webapp_base_url}/dashboard"}}],
-                [{"text": "👤 Mi Perfil", "callback_data": "my_profile"}],
-                [{"text": "⚙️ Editar Datos", "callback_data": "edit_profile"}],
-                [{"text": "🎛️ Teclado Mini Apps", "callback_data": "show_webapp_keyboard"}]
-            ]
+            "keyboard": [
+                [{"text": "👤 Perfil"}, {"text": "⚙️ Settings"}]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": False
         }
     
     @staticmethod
@@ -458,64 +453,20 @@ class TelegramWebhookManagerService:
     @staticmethod
     def _handle_registered_user(chat_id: int, text: str, user: TelegramUserSchema):
         """Maneja usuarios ya registrados"""
-        # Comandos especiales
-        if text.lower() in ["/miperfil", "/perfil", "/datos"]:
+        # Manejar botones del teclado
+        if text == "👤 Perfil":
             TelegramWebhookManagerService._show_user_profile(chat_id, user)
             return
-        elif text.lower() in ["/editarnombre", "/editaredad", "/editardatos"]:
-            TelegramWebhookManagerService._show_edit_options(chat_id, user)
-            return
-        elif text == "🔙 Menú Principal":
-            # Volver al menú principal con inline keyboard
-            greeting_message = (
-                f"╭─────────────────────────╮\n"
-                f"│  <b>👋 ¡HOLA {user.name.upper()}! 👋</b>  │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"🌟 <b>¡Bienvenido de vuelta!</b> 🌟\n\n"
-                f"💪 <b>¿Listo para entrenar hoy?</b>\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│   🎯 <b>¿Qué deseas hacer?</b>   │\n"
-                f"└─────────────────────────┘"
-            )
-            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
-            return
-        elif text == "/webapp" or text.lower() == "/miniapps":
-            # Mostrar teclado con Mini Apps
-            webapp_message = (
-                f"╭─────────────────────────╮\n"
-                f"│  <b>🚀 MINI APPS 🚀</b>  │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"✨ <b>¡Hola {user.name}!</b> ✨\n\n"
-                f"🎯 <b>Usa las Mini Apps para una</b>\n"
-                f"<b>experiencia más completa:</b>\n\n"
-                f"🏋️ <b>Rutina Completa:</b> Crea rutinas detalladas\n"
-                f"👤 <b>Perfil Avanzado:</b> Gestiona tu información\n"
-                f"📊 <b>Dashboard:</b> Ve tus estadísticas\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│ 💡 <i>Toca los botones de abajo</i> │\n"
-                f"│    <i>para abrir las Mini Apps</i>   │\n"
-                f"└─────────────────────────┘"
-            )
-            keyboard = TelegramWebhookManagerService._create_webapp_keyboard()
-            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, webapp_message, keyboard)
+        elif text == "⚙️ Settings":
+            TelegramWebhookManagerService._show_settings(chat_id, user)
             return
         
-        # Comandos especiales para entrenamientos
-        if text.lower() in ["hoy", "/hoy"]:
-            TelegramWebhookManagerService._show_today_workout(chat_id, user)
-            return
-        elif text.lower() in ["entrenar", "/entrenar"]:
-            TelegramWebhookManagerService._show_training_session(chat_id, user)
-            return
-        
-        # Mensaje de bienvenida simplificado
+        # Mensaje de saludo simplificado
         greeting_message = (
-            f"👋 <b>Hola {user.name}!</b>\n\n"
-            f"🏋️ <b>GymBot</b> - ¿Qué deseas hacer?"
+            f"Hola buenas <b>{user.name}</b> ¿qué deseas hacer?"
         )
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-        TelegramWebhookManagerService._send_message_to_telegram(chat_id, greeting_message, keyboard)
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, greeting_message, keyboard)
     
     @staticmethod
     def _show_user_profile(chat_id: int, user: TelegramUserSchema):
@@ -532,7 +483,30 @@ class TelegramWebhookManagerService:
         )
         
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-        TelegramWebhookManagerService._send_message_to_telegram(chat_id, profile_message, keyboard)
+        TelegramWebhookManagerService._send_message_with_keyboard(chat_id, profile_message, keyboard)
+
+    @staticmethod
+    def _show_settings(chat_id: int, user: TelegramUserSchema):
+        """Muestra la webapp de settings"""
+        webapp_base_url = getattr(settings, 'WEBAPP_BASE_URL', 'http://localhost:8001')
+        
+        message = (
+            f"⚙️ <b>Settings</b>\n\n"
+            f"Configura tu cuenta y preferencias:"
+        )
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "⚙️ Abrir Settings",
+                        "web_app": {"url": f"{webapp_base_url}/settings"}
+                    }
+                ]
+            ]
+        }
+        
+        TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
     
     @staticmethod
     def _show_edit_options(chat_id: int, user: TelegramUserSchema):
@@ -895,12 +869,8 @@ class TelegramWebhookManagerService:
             # Verificar si son datos de registro (detectar por la presencia de name y age)
             if 'name' in data and 'age' in data and not webapp_type:
                 TelegramWebhookManagerService._handle_registration_data(chat_id, data, user)
-            elif webapp_type == 'rutina_completa':
-                TelegramWebhookManagerService._handle_rutina_completa_data(chat_id, data, user)
-            elif webapp_type == 'perfil_avanzado':
-                TelegramWebhookManagerService._handle_perfil_avanzado_data(chat_id, data, user)
-            elif webapp_type == 'dashboard_action':
-                TelegramWebhookManagerService._handle_dashboard_data(chat_id, data, user)
+            elif data.get('action') == 'delete_account':
+                TelegramWebhookManagerService._handle_delete_account(chat_id, data, user)
             else:
                 # Datos genéricos
                 success_message = (
@@ -966,28 +936,17 @@ class TelegramWebhookManagerService:
             user.updated_at = datetime.utcnow()
             TelegramWebhookManagerService._save_user(user)
             
-            # Mensaje de éxito con diseño mejorado
+            # Mensaje de éxito simplificado
             success_message = (
-                f"╭─────────────────────────╮\n"
-                f"│ <b>🎉 ¡REGISTRO EXITOSO! 🎉</b> │\n"
-                f"╰─────────────────────────╯\n\n"
-                f"✨ <b>¡Excelente, {user.name}!</b> ✨\n\n"
-                f"🎊 <b>Tu registro se completó</b>\n"
-                f"<b>exitosamente usando nuestro</b>\n"
-                f"<b>formulario inteligente</b> 🎊\n\n"
-                f"📊 <b>Datos registrados:</b>\n"
-                f"• 👤 <b>Nombre:</b> {user.name}\n"
-                f"• 🎂 <b>Edad:</b> {user.age} años\n"
-                f"• 📅 <b>Fecha:</b> {user.registered_at.strftime('%d/%m/%Y %H:%M')}\n\n"
-                f"🔓 <b>Ahora tienes acceso completo</b>\n"
-                f"<b>a todas las funciones del bot</b>\n\n"
-                f"┌─────────────────────────┐\n"
-                f"│   💪 <b>¿Listo para empezar</b>   │\n"
-                f"│    <b>tu rutina perfecta?</b>    │\n"
-                f"└─────────────────────────┘"
+                f"✅ <b>¡Registro exitoso!</b>\n\n"
+                f"Bienvenido <b>{user.name}</b> a GymBot\n\n"
+                f"<b>Datos registrados:</b>\n"
+                f"• Nombre: {user.name}\n"
+                f"• Edad: {user.age} años\n"
+                f"• Fecha: {user.registered_at.strftime('%d/%m/%Y %H:%M')}"
             )
             keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
-            TelegramWebhookManagerService._send_message_to_telegram(chat_id, success_message, keyboard)
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, success_message, keyboard)
             
         except (ValueError, TypeError) as e:
             logger.error(f"Error procesando datos de registro: {e}")
@@ -1121,3 +1080,26 @@ class TelegramWebhookManagerService:
         
         keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
         TelegramWebhookManagerService._send_message_to_telegram(chat_id, message, keyboard)
+
+    @staticmethod
+    def _handle_delete_account(chat_id: int, data: dict, user: TelegramUserSchema):
+        """Maneja la eliminación de cuenta desde settings webapp"""
+        if data.get('confirmed'):
+            # Eliminar usuario
+            if chat_id in users_db:
+                del users_db[chat_id]
+                logger.info(f"Cuenta eliminada para chat_id={chat_id}")
+            
+            message = (
+                f"✅ <b>Cuenta eliminada</b>\n\n"
+                f"Tu cuenta ha sido eliminada exitosamente.\n"
+                f"Esperamos verte de nuevo pronto."
+            )
+            TelegramWebhookManagerService._send_message_to_telegram(chat_id, message)
+        else:
+            message = (
+                f"❌ <b>Eliminación cancelada</b>\n\n"
+                f"Tu cuenta no ha sido eliminada."
+            )
+            keyboard = TelegramWebhookManagerService._create_main_menu_keyboard()
+            TelegramWebhookManagerService._send_message_with_keyboard(chat_id, message, keyboard)
